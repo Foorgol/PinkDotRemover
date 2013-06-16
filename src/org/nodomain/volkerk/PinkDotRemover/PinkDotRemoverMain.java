@@ -82,7 +82,7 @@ public class PinkDotRemoverMain {
      */
     protected static ArrayList<File> collectFiles(String[] args)
     {
-        ArrayList<File> fileList = new ArrayList<>();
+        ArrayList<File> fileList = new ArrayList();
         
         for (String s : args)
         {
@@ -102,7 +102,7 @@ public class PinkDotRemoverMain {
         }
         
         // clean-up: allow only files ending in "dng" or "DNG"
-        ArrayList<File> result = new ArrayList<>();
+        ArrayList<File> result = new ArrayList();
         for (File f : fileList)
         {
             String fname = f.getName();

@@ -274,7 +274,7 @@ public class PinkDotRemover {
         // convert the grid data into single dot coordinates
         if (gridData == null) return null;
         
-        ArrayList<int[]> result = new ArrayList<>();
+        ArrayList<int[]> result = new ArrayList();
         for (int[] gridBlock : gridData)
         {
             int minX = gridBlock[0];
@@ -319,7 +319,7 @@ public class PinkDotRemover {
                 InputStreamReader ir = new InputStreamReader(in);
                 BufferedReader b  = new BufferedReader(ir);
                                 
-                result = new ArrayList<>();
+                result = new ArrayList();
                 
                 // read the file line-by-line and convert the ASCII-text into numbers
                 String line;
