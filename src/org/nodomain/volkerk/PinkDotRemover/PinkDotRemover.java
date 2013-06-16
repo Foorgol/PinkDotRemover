@@ -87,36 +87,18 @@ public class PinkDotRemover {
             return false;
         }
         
-        // step 2a: get the "regular" or "grid" dot pattern
-        int[][] dotPattern = getDotPattern(w, h);
-        if (dotPattern == null)
+        // step 2: get the "regular" or "grid" dot pattern
+        ArrayList<int[]> gridDots = getGridDotPattern(w, h);
+        if (gridDots == null)
         {
             System.err.println("No dot pattern for images " + w + "x" + h + " available!");
             return false;
         }
-
-        // step 2b: convert the grid data into single dot coordinates
-        for (int[] dots : dotPattern)
-        {
-            int minX = dots[0];
-            int minY = dots[1];
-            int maxX = dots[2];
-            int maxY = dots[3];
-            int stepX = dots[4];
-            int stepY = dots[5];
-
-            // "unwrap" the gridd
-            for (int y = minY; y <= maxY; y += stepY)
-            {
-                for (int x = minX; x <= maxX; x += stepX)
-                {
-                    // add the regular coordinates to the empiric coordinates from before
-                    dotList.add(new int[] {x, y});
-                }
-            }
-        }
         
-        // loop over all coordinates and do the interpolation to fix the distortion
+        // step 3: merge the two lists
+        dotList.addAll(gridDots);
+        
+        // finally, loop over all coordinates and do the interpolation to fix the distortion
         for (int[] dot : dotList)
         {
             interpolPixel(ifdSrc, ifdDst, dot[0], dot[1], 1.0);
@@ -195,19 +177,19 @@ public class PinkDotRemover {
     }
     
     /**
-     * Retrieves the data for the regular, grid-like dots for a specific image size
+     * Retrieves the coordinates for the regular, grid-like dots for a specific image size
      * 
      * @param w image width
      * @param h image height
-     * @return an array of multiple {startx, starty, endx, endy, stepx, stepy]-entries or null if no data for the image size is available
+     * @return a list of (x, y)-coordinates or null if no data for the requested image size is available
      */
-    protected int[][] getDotPattern(int w, int h)
+    protected ArrayList<int[]> getGridDotPattern(int w, int h)
     {
-        int[][] result = null;
+        int[][] gridData = null;
         
         if ((w == 1280) && (h == 720))
         {
-            result = new int[][] {
+            gridData = new int[][] {
                 {511, 213, 767, 263, 8, 10},
                 {507, 219, 763, 269, 8, 10},
                 {504, 234, 760, 304, 8, 10},
@@ -275,6 +257,30 @@ public class PinkDotRemover {
                 {516, 418, 764, 428, 8, 10}
             };
         
+        }
+        
+        // convert the grid data into single dot coordinates
+        if (gridData == null) return null;
+        
+        ArrayList<int[]> result = new ArrayList<>();
+        for (int[] gridBlock : gridData)
+        {
+            int minX = gridBlock[0];
+            int minY = gridBlock[1];
+            int maxX = gridBlock[2];
+            int maxY = gridBlock[3];
+            int stepX = gridBlock[4];
+            int stepY = gridBlock[5];
+
+            // "unwrap" the gridd
+            for (int y = minY; y <= maxY; y += stepY)
+            {
+                for (int x = minX; x <= maxX; x += stepX)
+                {
+                    // add the regular coordinates to the empiric coordinates from before
+                    result.add(new int[] {x, y});
+                }
+            }
         }
             
         return result;
