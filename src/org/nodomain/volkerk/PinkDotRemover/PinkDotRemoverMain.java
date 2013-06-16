@@ -1,7 +1,15 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright © 2013 Volker Knollmann
+ * 
+ * This work is free. You can redistribute it and/or modify it under the
+ * terms of the Do What The Fuck You Want To Public License, Version 2,
+ * as published by Sam Hocevar. See the COPYING file or visit
+ * http://www.wtfpl.net/ for more details.
+ * 
+ * This program comes without any warranty. Use it at your own risk or
+ * don't use it at all.
  */
+
 package org.nodomain.volkerk.PinkDotRemover;
 
 import java.io.File;
