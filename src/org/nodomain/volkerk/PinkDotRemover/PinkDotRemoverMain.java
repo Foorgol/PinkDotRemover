@@ -5,8 +5,8 @@
 package org.nodomain.volkerk.PinkDotRemover;
 
 /**
- *
- * @author volker
+ * The main class for the application. Parses the command line, instanciates
+ * the remover class and triggers the removal
  */
 public class PinkDotRemoverMain {
 
@@ -29,7 +29,7 @@ public class PinkDotRemoverMain {
         {
             pdr = new PinkDotRemover(args[0]);
 
-            if (!(pdr.doRemovalInMemory(true)))
+            if (!(pdr.doRemovalInMemory()))
             {
                 System.err.println("Pink dot removal failed, no data written...");
                 return;

@@ -4,45 +4,36 @@
  */
 package org.nodomain.volkerk.PinkDotRemover;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.nodomain.volkerk.SimpleTIFFlib.ImageFileDirectory;
-import org.nodomain.volkerk.SimpleTIFFlib.TIFFhandler;
 import org.nodomain.volkerk.SimpleTIFFlib.TIFFhandler;
 
 /**
- *
- * @author volker
+ * Removes the AF dots in Magic Lantern's raw video frames for the Canon 650D
  */
 public class PinkDotRemover {
     
     /**
-     * the file to modify
+     * the DNG file to modify
      */
     protected String srcFileName;
     
     /**
-     * the handler for the input file
+     * the image handler for the input file
      */
-    TIFFhandler srcDng;
+    protected TIFFhandler srcDng;
     
     /**
-     * a handler for the output file -- will be initialized as the input file
+     * an image handler for the output file -- will be initialized from the input file
      */
-    TIFFhandler dstDng;
+    protected TIFFhandler dstDng;
     
     /**
      * Constructor. Checks for a valid file name and tries to open the file
@@ -69,20 +60,26 @@ public class PinkDotRemover {
         }
         
         srcFileName = fName;
-        
-   }
+    }
     
-    public boolean doRemovalInMemory(boolean useEmpiricPattern)
+    /**
+     * Removes the pink dots from the target file
+     * 
+     * @return true if the dots could be removed, false in case of errors
+     */
+    public boolean doRemovalInMemory()
     {
+        // prepare access to the image data
+        // we assume that the TIFF file contains exactly one RAW image...
         ImageFileDirectory ifdSrc = srcDng.getFirstIFDwithCFA();
         ImageFileDirectory ifdDst = dstDng.getFirstIFDwithCFA();
         int w = (int) ifdSrc.imgWidth();
         int h = (int) ifdSrc.imgLen();
         
-        ifdSrc.dumpInfo();
+        // prepare a list of x,y-values representing the distorted dots
+        ArrayList<int[]> dotList;
         
-        ArrayList<int[]> dotList = new ArrayList<>();
-        
+        // step 1: get the empirically determined dot coordinates
         dotList = getEmpiricDotPattern(w, h);
         if (dotList == null)
         {
@@ -90,6 +87,7 @@ public class PinkDotRemover {
             return false;
         }
         
+        // step 2a: get the "regular" or "grid" dot pattern
         int[][] dotPattern = getDotPattern(w, h);
         if (dotPattern == null)
         {
@@ -97,6 +95,7 @@ public class PinkDotRemover {
             return false;
         }
 
+        // step 2b: convert the grid data into single dot coordinates
         for (int[] dots : dotPattern)
         {
             int minX = dots[0];
@@ -106,52 +105,56 @@ public class PinkDotRemover {
             int stepX = dots[4];
             int stepY = dots[5];
 
+            // "unwrap" the gridd
             for (int y = minY; y <= maxY; y += stepY)
             {
                 for (int x = minX; x <= maxX; x += stepX)
                 {
+                    // add the regular coordinates to the empiric coordinates from before
                     dotList.add(new int[] {x, y});
                 }
             }
         }
         
-        double fac1 = 1.0;
-        double fac2 = 0;
-        
+        // loop over all coordinates and do the interpolation to fix the distortion
         for (int[] dot : dotList)
         {
-            interpolPixel(ifdSrc, ifdDst, dot[0], dot[1], fac1);
-            //interpolPixel(ifdSrc, ifdDst, x-2, y, fac2);
-            //interpolPixel(ifdSrc, ifdDst, x+2, y, fac2);
-            //interpolPixel(ifdSrc, ifdDst, x, y-2, fac2);
-            //interpolPixel(ifdSrc, ifdDst, x, y+2, fac2);
-            //interpolPixel(ifdSrc, ifdDst, x-2, y-2, fac2);
-            //interpolPixel(ifdSrc, ifdDst, x+2, y+2, fac2);
-            //interpolPixel(ifdSrc, ifdDst, x+2, y-2, fac2);
-            //interpolPixel(ifdSrc, ifdDst, x-2, y+2, fac2);
+            interpolPixel(ifdSrc, ifdDst, dot[0], dot[1], 1.0);
         }
         
         return true;
     }
     
+    
+    /**
+     * Replaces a pixel intensity with an interpolation of the "X"-like neighboring pixels
+     * Pixels closer than 2 pixel to the image border can't be interpolated and remain unmodified.
+     * 
+     * @param ifdSrc ImageFileHandler for the distorted source image data (read)
+     * @param ifdDst ImageFileHandler for the improved image data (write)
+     * @param x the 0-based x-coordinate of the pixel to fix
+     * @param y the 0-based y-coordinate of the pixel to fix
+     * @param weight a factor between 0...1 blending the current pixel value with the new, interpolated value; 1.0 replaces the pixel with the interpolated value
+     */
     protected void interpolPixel(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, int x, int y, double weight)
     {
         if ((x < 2) || (x > (ifdSrc.imgWidth() - 3)) || (y < 2) || (y > (ifdSrc.imgLen() - 3))) return;
         
-        double fac1 = 0.0;
-        double fac2 = 0.0;
+        //double fac1 = 0.0;
+        //double fac2 = 0.0;
         double fac3 = 0.25;
 
         // calc a new pixel value from the neighbors of the dot;
         // no range checking here; I assume there's always a neighbor...
         double newVal = 0;
         
-        // direct neighbors
-        newVal += fac1 * ifdSrc.CFA_getPixel(x - 2, y);
-        newVal += fac1 * ifdSrc.CFA_getPixel(x + 2, y);
-        newVal += fac1 * ifdSrc.CFA_getPixel(x, y + 2);
-        newVal += fac1 * ifdSrc.CFA_getPixel(x, y - 2);
+        // direct neighbors: "+" direction
+        //newVal += fac1 * ifdSrc.CFA_getPixel(x - 2, y);
+        //newVal += fac1 * ifdSrc.CFA_getPixel(x + 2, y);
+        //newVal += fac1 * ifdSrc.CFA_getPixel(x, y + 2);
+        //newVal += fac1 * ifdSrc.CFA_getPixel(x, y - 2);
 
+        // direct neighbors: "X" direction
         newVal += fac3 * ifdSrc.CFA_getPixel(x - 2, y - 2);
         newVal += fac3 * ifdSrc.CFA_getPixel(x + 2, y - 2);
         newVal += fac3 * ifdSrc.CFA_getPixel(x - 2, y + 2);
@@ -163,12 +166,20 @@ public class PinkDotRemover {
         //newVal += fac2 * ifdSrc.CFA_getPixel(x - 4, y + 4);
         //newVal += fac2 * ifdSrc.CFA_getPixel(x + 4, y - 4);
         
-        newVal = (1.0 - weight) * ((double) ifdSrc.CFA_getPixel(x, y)) + weight * newVal;
+        if (weight != 1.0) newVal = (1.0 - weight) * ((double) ifdSrc.CFA_getPixel(x, y)) + weight * newVal;
 
         ifdDst.CFA_setPixel(x, y, (int) newVal);
         
     }
     
+    
+    /**
+     * Writes the contents of the destination image to a DNG file. The filename
+     * is constructed from the original filename plus a leading underscore.
+     * Existing files will be overwritten.
+     * 
+     * @return the name and (possibly) path of the destination file
+     */
     public String writeResultToFile()
     {
         Path srcPath = Paths.get(srcFileName);
@@ -179,12 +190,17 @@ public class PinkDotRemover {
         Path dstPath = Paths.get(pName, "_" + fName);
                 
         dstDng.saveAs(dstPath);
-        dstDng.getFirstIFDwithCFA().CFA_primitiveDemosaic("/tmp/pdr.png");
-        //dstDng.getFirstIFDwithCFA().CFA_raw2png("/tmp/rawTest_after.png", false);
         
         return dstPath.toString();
     }
     
+    /**
+     * Retrieves the data for the regular, grid-like dots for a specific image size
+     * 
+     * @param w image width
+     * @param h image height
+     * @return an array of multiple {startx, starty, endx, endy, stepx, stepy]-entries or null if no data for the image size is available
+     */
     protected int[][] getDotPattern(int w, int h)
     {
         int[][] result = null;
@@ -264,6 +280,13 @@ public class PinkDotRemover {
         return result;
     }
     
+    /**
+     * Reads "empiric" dot coordinates stored in a text file in the CLASSPATH
+     * 
+     * @param w image width
+     * @param h image height
+     * @return a list of (x, y)-coordinates or null if no data for the requested image size is available
+     */
     protected ArrayList<int[]> getEmpiricDotPattern(int w, int h)
     {
         ArrayList<int[]> result = null;
@@ -271,16 +294,16 @@ public class PinkDotRemover {
         if ((w == 1280) && (h == 720))
         {
             
-            Charset charset = Charset.forName("US-ASCII");
-            
             try
             {
+                // open the dot data file as a resource (e. g. in the JAR file)
                 InputStream in = this.getClass().getResourceAsStream("res/pixCoord_threshold2068.txt");
                 InputStreamReader ir = new InputStreamReader(in);
-                
                 BufferedReader b  = new BufferedReader(ir);
                                 
                 result = new ArrayList<>();
+                
+                // read the file line-by-line and convert the ASCII-text into numbers
                 String line;
                 while ((line = b.readLine()) != null)
                 {
