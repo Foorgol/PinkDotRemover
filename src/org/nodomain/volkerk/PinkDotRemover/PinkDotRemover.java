@@ -96,7 +96,7 @@ public class PinkDotRemover {
             System.err.println("No empiric dot pattern for image " + w + "x" + h + " available!");
             return false;
         }
-        interpolPixel(ifdSrc, ifdDst, dotList, 1.0, 2100);
+        interpolPixel(ifdSrc, ifdDst, dotList, 1.0);
         
         dotList.clear();
         // step 2: get the "regular" or "grid" dot pattern
@@ -108,7 +108,7 @@ public class PinkDotRemover {
             System.err.println("No grid dot pattern for image " + w + "x" + h + " available!");
             return false;
         }
-        interpolPixel(ifdSrc, ifdDst, dotList, 1.0, -1);
+        interpolPixel(ifdSrc, ifdDst, dotList, 1.0);
                 
         return true;
     }
@@ -124,7 +124,7 @@ public class PinkDotRemover {
      * @param y the 0-based y-coordinate of the pixel to fix
      * @param weight a factor between 0...1 blending the current pixel value with the new, interpolated value; 1.0 replaces the pixel with the interpolated value
      */
-    protected void interpolPixel(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, ArrayList<int[]> dotList, double weight, int threshold)
+    protected void interpolPixel(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, ArrayList<int[]> dotList, double weight)
     {
         int w = (int) ifdSrc.imgWidth();
         int h = (int) ifdSrc.imgLen();
@@ -136,23 +136,44 @@ public class PinkDotRemover {
             
             // don't fix pixel on image borders
             if ((x < 2) || (x > (w - 3)) || (y < 2) || (y > (h - 3))) continue;
+            
+            // determine intensity gradients in all four directions
+            int g1 = ifdSrc.CFA_getPixel(x, y - 2) - ifdSrc.CFA_getPixel(x, y + 2); // top-down
+            int g2 = ifdSrc.CFA_getPixel(x - 2, y) - ifdSrc.CFA_getPixel(x + 2, y); // left-right
+            int g3 = ifdSrc.CFA_getPixel(x - 2, y - 2) - ifdSrc.CFA_getPixel(x + 2, y + 2); // top-left, down-right
+            int g4 = ifdSrc.CFA_getPixel(x + 2, y - 2) - ifdSrc.CFA_getPixel(x - 2, y + 2); // top-right, down-left
+            
+            // find the minimum gradient
+            g1 = Math.abs(g1);
+            g2 = Math.abs(g2);
+            g3 = Math.abs(g3);
+            g4 = Math.abs(g4);
+            
+            int minG = Math.min(g1, g2);
+            minG = Math.min(minG, g3);
+            minG = Math.min(minG, g4);
+            
+            // use the minimum gradient for interpolation
+            double newVal;
+            if (minG == g1)
+            {
+                newVal = (ifdSrc.CFA_getPixel(x, y - 2) + ifdSrc.CFA_getPixel(x, y + 2)) * 0.5;
+            }
+            else if (minG == g2)
+            {
+                newVal = (ifdSrc.CFA_getPixel(x-2, y) + ifdSrc.CFA_getPixel(x+2, y)) * 0.5;
+            }
+            else if (minG == g3)
+            {
+                newVal = (ifdSrc.CFA_getPixel(x-2, y-2) + ifdSrc.CFA_getPixel(x+2, y+2)) * 0.5;
+            }
+            else
+            {
+                newVal = (ifdSrc.CFA_getPixel(x+2, y-2) + ifdSrc.CFA_getPixel(x-2, y+2)) * 0.5;
+            }
 
-            // only fix pixels darker than "threshold"
-            int curVal = ifdSrc.CFA_getPixel(x, y);
-            //if ((threshold > 0) && (curVal > threshold)) continue;
 
-            double fac = 0.25;
-
-            // calc a new pixel value from the neighbors of the dot;
-            double newVal = 0;
-
-            // direct neighbors: "X" direction
-            newVal += fac * ifdSrc.CFA_getPixel(x - 2, y - 2);
-            newVal += fac * ifdSrc.CFA_getPixel(x + 2, y - 2);
-            newVal += fac * ifdSrc.CFA_getPixel(x - 2, y + 2);
-            newVal += fac * ifdSrc.CFA_getPixel(x + 2, y + 2);
-
-            if (weight != 1.0) newVal = (1.0 - weight) * ((double) curVal) + weight * newVal;
+            if (weight != 1.0) newVal = (1.0 - weight) * ((double) ifdSrc.CFA_getPixel(x,y)) + weight * newVal;
 
             ifdDst.CFA_setPixel(x, y, (int) newVal);
         }
