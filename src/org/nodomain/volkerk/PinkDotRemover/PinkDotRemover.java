@@ -96,26 +96,20 @@ public class PinkDotRemover {
             System.err.println("No empiric dot pattern for image " + w + "x" + h + " available!");
             return false;
         }
+        interpolPixel(ifdSrc, ifdDst, dotList, 1.0, 2100);
         
+        dotList.clear();
         // step 2: get the "regular" or "grid" dot pattern
-        ArrayList<int[]> gridDots = getGridDotPattern(w, h);
-        if (gridDots == null)
+        dotList = getGridDotPattern(w, h);
+        if (dotList == null)
         {
             System.err.println();
             System.err.println();
             System.err.println("No grid dot pattern for image " + w + "x" + h + " available!");
             return false;
         }
-        
-        // step 3: merge the two lists
-        dotList.addAll(gridDots);
-        
-        // finally, loop over all coordinates and do the interpolation to fix the distortion
-        for (int[] dot : dotList)
-        {
-            interpolPixel(ifdSrc, ifdDst, dot[0], dot[1], 1.0);
-        }
-        
+        interpolPixel(ifdSrc, ifdDst, dotList, 1.0, -1);
+                
         return true;
     }
     
@@ -130,39 +124,38 @@ public class PinkDotRemover {
      * @param y the 0-based y-coordinate of the pixel to fix
      * @param weight a factor between 0...1 blending the current pixel value with the new, interpolated value; 1.0 replaces the pixel with the interpolated value
      */
-    protected void interpolPixel(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, int x, int y, double weight)
+    protected void interpolPixel(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, ArrayList<int[]> dotList, double weight, int threshold)
     {
-        if ((x < 2) || (x > (ifdSrc.imgWidth() - 3)) || (y < 2) || (y > (ifdSrc.imgLen() - 3))) return;
+        int w = (int) ifdSrc.imgWidth();
+        int h = (int) ifdSrc.imgLen();
         
-        //double fac1 = 0.0;
-        //double fac2 = 0.0;
-        double fac3 = 0.25;
+        for (int[] dot : dotList)
+        {
+            int x = dot[0];
+            int y = dot[1];
+            
+            // don't fix pixel on image borders
+            if ((x < 2) || (x > (w - 3)) || (y < 2) || (y > (h - 3))) continue;
 
-        // calc a new pixel value from the neighbors of the dot;
-        // no range checking here; I assume there's always a neighbor...
-        double newVal = 0;
-        
-        // direct neighbors: "+" direction
-        //newVal += fac1 * ifdSrc.CFA_getPixel(x - 2, y);
-        //newVal += fac1 * ifdSrc.CFA_getPixel(x + 2, y);
-        //newVal += fac1 * ifdSrc.CFA_getPixel(x, y + 2);
-        //newVal += fac1 * ifdSrc.CFA_getPixel(x, y - 2);
+            // only fix pixels darker than "threshold"
+            int curVal = ifdSrc.CFA_getPixel(x, y);
+            //if ((threshold > 0) && (curVal > threshold)) continue;
 
-        // direct neighbors: "X" direction
-        newVal += fac3 * ifdSrc.CFA_getPixel(x - 2, y - 2);
-        newVal += fac3 * ifdSrc.CFA_getPixel(x + 2, y - 2);
-        newVal += fac3 * ifdSrc.CFA_getPixel(x - 2, y + 2);
-        newVal += fac3 * ifdSrc.CFA_getPixel(x + 2, y + 2);
+            double fac = 0.25;
 
-        // indirect neighbors
-        //newVal += fac2 * ifdSrc.CFA_getPixel(x - 4, y - 4);
-        //newVal += fac2 * ifdSrc.CFA_getPixel(x + 4, y + 4);
-        //newVal += fac2 * ifdSrc.CFA_getPixel(x - 4, y + 4);
-        //newVal += fac2 * ifdSrc.CFA_getPixel(x + 4, y - 4);
-        
-        if (weight != 1.0) newVal = (1.0 - weight) * ((double) ifdSrc.CFA_getPixel(x, y)) + weight * newVal;
+            // calc a new pixel value from the neighbors of the dot;
+            double newVal = 0;
 
-        ifdDst.CFA_setPixel(x, y, (int) newVal);
+            // direct neighbors: "X" direction
+            newVal += fac * ifdSrc.CFA_getPixel(x - 2, y - 2);
+            newVal += fac * ifdSrc.CFA_getPixel(x + 2, y - 2);
+            newVal += fac * ifdSrc.CFA_getPixel(x - 2, y + 2);
+            newVal += fac * ifdSrc.CFA_getPixel(x + 2, y + 2);
+
+            if (weight != 1.0) newVal = (1.0 - weight) * ((double) curVal) + weight * newVal;
+
+            ifdDst.CFA_setPixel(x, y, (int) newVal);
+        }
         
     }
     
@@ -244,8 +237,8 @@ public class PinkDotRemover {
                 {775, 353, 959, 363, 8, 10},
                 {771, 359, 955, 369, 8, 10},
                 
-                {327, 273, 903, 283, 8, 10},
-                {315, 279, 939, 289, 8, 10},
+                {319, 273, 959, 283, 8, 10},
+                {315, 279, 955, 289, 8, 10},
                 
                 {511, 293, 767, 303, 8, 10},
                 {507, 299, 763, 309, 8, 10},
@@ -259,14 +252,20 @@ public class PinkDotRemover {
                 {319, 353, 503, 363, 8, 10},
                 {315, 359, 499, 369, 8, 10},
                 
-                {512, 214, 760, 224, 8, 10},
-                {516, 218, 764, 228, 8, 10},
+                {504, 214, 760, 224, 8, 10},
+                {508, 218, 764, 228, 8, 10},
                 
                 {312, 314, 952, 324, 8, 10},
-                {308, 318, 948, 328, 8, 10},
+                {308, 318, 956, 328, 8, 10},
                 
-                {496, 414, 744, 424, 8, 10},
-                {516, 418, 764, 428, 8, 10}
+                {496, 414, 760, 424, 8, 10},
+                {516, 418, 764, 428, 8, 10},
+                
+                {511, 373, 767, 383, 8, 10},
+                {507, 379, 763, 389, 8, 10},
+                
+                {511, 473, 767, 483, 8, 10},
+                {507, 479, 763, 489, 8, 10}
             };
         
         }
