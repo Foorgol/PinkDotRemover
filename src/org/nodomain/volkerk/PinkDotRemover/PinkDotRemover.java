@@ -83,7 +83,7 @@ public class PinkDotRemover {
         dotList = getEmpiricDotPattern(w, h);
         if (dotList == null)
         {
-            System.err.println("No empiric dot pattern for images " + w + "x" + h + " available!");
+            System.err.println("No empiric dot pattern for image " + w + "x" + h + " available!");
             return false;
         }
         
@@ -91,7 +91,7 @@ public class PinkDotRemover {
         ArrayList<int[]> gridDots = getGridDotPattern(w, h);
         if (gridDots == null)
         {
-            System.err.println("No dot pattern for images " + w + "x" + h + " available!");
+            System.err.println("No grid dot pattern for image " + w + "x" + h + " available!");
             return false;
         }
         
