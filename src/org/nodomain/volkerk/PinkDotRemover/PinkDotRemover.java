@@ -226,7 +226,8 @@ public class PinkDotRemover extends LoggingClass {
         
         String fName = srcPath.getFileName().toString();
         dbg("fName = ", fName);
-        String pName = srcPath.getParent().normalize().toString();
+        String pName = "";
+        if (srcPath.getParent() != null) pName = srcPath.getParent().normalize().toString();
         dbg("pName = ", pName);
         
         preLog(LVL_DEBUG, "Trying to instanciate Path for destination file");
