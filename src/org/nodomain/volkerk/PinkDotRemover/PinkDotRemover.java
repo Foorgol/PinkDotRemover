@@ -19,13 +19,14 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import org.nodomain.volkerk.LoggingLib.LoggingClass;
 import org.nodomain.volkerk.SimpleTIFFlib.ImageFileDirectory;
 import org.nodomain.volkerk.SimpleTIFFlib.TIFFhandler;
 
 /**
  * Removes the AF dots in Magic Lantern's raw video frames for the Canon 650D
  */
-public class PinkDotRemover {
+public class PinkDotRemover extends LoggingClass {
     
     /**
      * the DNG file to modify
@@ -49,22 +50,34 @@ public class PinkDotRemover {
      */
     public PinkDotRemover(String fName)
     {
+        preLog(LVL_DEBUG, "Trying to instanciate File for ", fName);
         File src = new File(fName);
         
         if (!(src.exists()))
         {
+            resultLog(LOG_FAIL + ": got null pointer");
             throw new IllegalArgumentException("File " + fName + " does not exist!");
         }
+        resultLog(LOG_OK);
         
+        logPush("Instanciating TIFF handlers for ", fName);
         try
         {
+            
+            logPush("Instanciating source TIFF handler with string arg");
             srcDng = new TIFFhandler(fName);
+            logPop("Done");
+            
+            logPush("Instanciating destination TIFF handler with string arg");
             dstDng = new TIFFhandler(fName);
+            logPop("Done");
         }
         catch (Exception e)
         {
+            failed(e.getMessage());
             throw new IllegalArgumentException("Baaaaad file: " + e.getMessage());
         }
+        logPop("Done");
         
         srcFileName = fName;
     }
@@ -78,8 +91,18 @@ public class PinkDotRemover {
     {
         // prepare access to the image data
         // we assume that the TIFF file contains exactly one RAW image...
+        logPush("Retrieving CFA IFDs");
+        
         ImageFileDirectory ifdSrc = srcDng.getFirstIFDwithCFA();
+        if (ifdSrc == null) dbg("Got null for srcDng");
+        
         ImageFileDirectory ifdDst = dstDng.getFirstIFDwithCFA();
+        if (ifdDst == null) dbg("Got null for srcDng");
+        
+        logPop("Done");
+        
+        ifdSrc.dumpInfo();
+        
         int w = (int) ifdSrc.imgWidth();
         int h = (int) ifdSrc.imgLen();
         
@@ -93,27 +116,31 @@ public class PinkDotRemover {
         ArrayList<int[]> dotList;
         
         // step 1: get the empirically determined dot coordinates
+        logPush("Getting empiric dot pattern");
         dotList = getEmpiricDotPattern(w, h);
+        logPop("Done");
         if (dotList == null)
         {
-            System.err.println();
-            System.err.println();
-            System.err.println("No empiric dot pattern for image " + w + "x" + h + " available!");
+            failed("No empiric dot pattern for image " + w + "x" + h + " available!");
             return false;
         }
+        logPush("Starting interpolation of empiric dots");
         interpolPixel(ifdSrc, ifdDst, dotList, 0, 0);
+        logPop("Done");
         
         dotList.clear();
         // step 2: get the "regular" or "grid" dot pattern
+        logPush("Getting grid dot pattern");
         dotList = getGridDotPattern(w, h);
+        logPop("Done");
         if (dotList == null)
         {
-            System.err.println();
-            System.err.println();
-            System.err.println("No grid dot pattern for image " + w + "x" + h + " available!");
+            failed("No grid dot pattern for image " + w + "x" + h + " available!");
             return false;
         }
+        logPush("Starting interpolation of grid dots");
         interpolPixel(ifdSrc, ifdDst, dotList,  xOffset, yOffset);
+        logPop("Done");
         return true;
     }
     
@@ -192,14 +219,26 @@ public class PinkDotRemover {
      */
     public String writeResultToFile()
     {
+        preLog(LVL_DEBUG, "Trying to instanciate Path for ", srcFileName);
         Path srcPath = Paths.get(srcFileName);
+        if (srcPath == null) resultLog((LOG_FAIL));
+        else resultLog(LOG_OK);
         
         String fName = srcPath.getFileName().toString();
+        dbg("fName = ", fName);
         String pName = srcPath.getParent().normalize().toString();
+        dbg("pName = ", pName);
         
+        preLog(LVL_DEBUG, "Trying to instanciate Path for destination file");
         Path dstPath = Paths.get(pName, "_" + fName);
+        if (dstPath == null) resultLog((LOG_FAIL));
+        else resultLog(LOG_OK);
                 
+        logPush("Calling dstDng.saveAs() with Path parameter ", dstPath);
         dstDng.saveAs(dstPath);
+        logPop("Done");
+        
+        dbg("File saved successfully");
         
         return dstPath.toString();
     }
@@ -384,6 +423,7 @@ public class PinkDotRemover {
         String resName = "";
         
         
+        preLog(LVL_DEBUG, "Trying to determine resource name");
         if ((w == 1280) && (h == 720))
         {
             resName = "res/pixCoord_threshold2068.txt";
@@ -393,14 +433,33 @@ public class PinkDotRemover {
             resName = "res/pixCoord_SilentPic_threshold2085.txt";
         }
         
-        if (resName.length() == 0) return null;
+        if (resName.length() == 0)
+        {
+            resultLog(LOG_FAIL);
+            return null;
+        }
+        
+        resultLog(LOG_OK);
+        dbg("Resource name is ", resName);
             
+        logPush("Reading and parsing resource");
         try
         {
             // open the dot data file as a resource (e. g. in the JAR file)
+            preLog(LVL_DEBUG, "getResourceAsStream");
             InputStream in = this.getClass().getResourceAsStream(resName);
+            if (in == null) resultLog(LOG_FAIL);
+            else resultLog(LOG_OK);
+            
+            preLog(LVL_DEBUG, "instanciate InputStreamReader");
             InputStreamReader ir = new InputStreamReader(in);
+            if (ir == null) resultLog(LOG_FAIL);
+            else resultLog(LOG_OK);
+            
+            preLog(LVL_DEBUG, "instanciate BufferedReader");
             BufferedReader b  = new BufferedReader(ir);
+            if (b == null) resultLog(LOG_FAIL);
+            else resultLog(LOG_OK);
 
             result = new ArrayList();
 
@@ -415,8 +474,9 @@ public class PinkDotRemover {
         }
         catch (Exception e)
         {
-            System.err.println("Something went terribly wrong while reading empiric dot pattern data: " + e.getMessage());
+            failed("Exception in getEmpiricDotPattern: ", e.getMessage());
         }
+        logPop("Done");
             
         return result;
     }

@@ -14,59 +14,80 @@ package org.nodomain.volkerk.PinkDotRemover;
 
 import java.io.File;
 import java.util.*;
+import org.nodomain.volkerk.LoggingLib.LoggingClass;
 
 /**
  * The main class for the application. Parses the command line, instanciates
  * the remover class and triggers the removal
  */
-public class PinkDotRemoverMain {
+public class PinkDotRemoverMain extends LoggingClass {
 
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args)
     {
+        // set the log level
+        logLvl = LVL_DEBUG;
+        
+        dbg("Command line args: " + strCat(args));
+        logPush("Trying to resolve dirs and valid files");
+        
         // retrieve all files denoted by command line arguments
         ArrayList<File> fList = collectFiles(args);
+        logPop("Done");
         
         // we need at least one file
         if (fList.size() == 0)
         {
-            //printHelp();
-            doGUI();
+            dbg("No valid files found!");
+            printHelp();
+            //doGUI();
             return;
         }
         
+        dbg("At least one valid file found for conversion.");
+        
         // loop over all files and convert them one by one
+        logPush("Looping over all found files for conversion");
         int cnt = 1;
         for (File f : fList)
         {
-            System.err.print("Processing file " + cnt + " / " + fList.size() + ": " + f.toString() + " ... ");
+            logPush("Processing file ", cnt, " / ", fList.size(), ": ", f);
             
             PinkDotRemover pdr;
             String dstPath;
             try
             {
+                logPush("Instanciating dot remover class for ", f);
                 pdr = new PinkDotRemover(f.toString());
+                logPop("Done");
 
+                logPush("Starting dot removal for ", f);
                 if (!(pdr.doRemovalInMemory()))
                 {
-                    System.err.println("Pink dot removal failed, no data written, program stopped");
+                    failed("Pink dot removal failed, no data written, program stopped");
+                    logPop("Aborted");
                     return;
                 }
+                logPop("Done");
 
+                logPush("Start writing results");
                 dstPath = pdr.writeResultToFile();
+                logPop("Done");
             }
             catch (Exception e)
             {
-                System.err.println("failed!");
-                System.err.println("Something went terribly wrong: " + e.getMessage());
+                failed("Exception in main(): ", e.getMessage());
+                logPop("Aborted");
                 return;
             }
             
-            System.err.println("done" + System.lineSeparator());
+            logPop("Done");
             cnt++;
         }
+        logPop("Done");
+        dbg("main() end.");
         
     }
     
@@ -85,30 +106,50 @@ public class PinkDotRemoverMain {
     {
         ArrayList<File> fileList = new ArrayList();
         
+        logPush("Looping over command line arguments");
         for (String s : args)
         {
+            preLog(LVL_DEBUG, "Trying to instanciate File for ", s);
             File f = new File(s);
+            resultLog(LOG_OK);
             
             if (!(f.exists())) continue;
+            dbg(s, " exists");
             
             if (f.isDirectory())
             {
+                logPush(s, " is a directory, diving into it");
                 for (File subDirFile : f.listFiles())
                 {
+                    dbg("Found file ", subDirFile.toString());
                     if (subDirFile.isFile()) fileList.add(subDirFile);
                 }
+                logPop("Done");
             }
             
-            if (f.isFile()) fileList.add(f);
+            if (f.isFile())
+            {
+                dbg(s, " is a file");
+                fileList.add(f);
+            }
         }
+        logPop("Done");
+        dbg(fileList.size(), " files found");
         
         // clean-up: allow only files ending in "dng" or "DNG"
         ArrayList<File> result = new ArrayList();
+        logPush("Checking if found files are valid");
         for (File f : fileList)
         {
             String fname = f.getName();
-            if (fname.endsWith("dng") || (fname.endsWith("DNG"))) result.add(f);
+            if (fname.endsWith("dng") || (fname.endsWith("DNG")))
+            {
+                dbg(f, " is okay");
+                result.add(f);
+            }
+            else dbg(f, " is NOT okay");
         }
+        logPop("Done");
         
         return result;
     }
