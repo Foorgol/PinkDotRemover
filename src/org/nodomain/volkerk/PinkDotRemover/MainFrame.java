@@ -4,19 +4,29 @@
  */
 package org.nodomain.volkerk.PinkDotRemover;
 
+import java.io.File;
+import javax.swing.JFileChooser;
+import java.util.*;
+
 /**
  *
  * @author volker
  */
 public class MainFrame extends javax.swing.JFrame {
 
+    protected final JFileChooser fChooser = new JFileChooser();
+    ArrayList<File> fList;
+
     /**
      * Creates new form MainFrame
      */
     public MainFrame() {
         initComponents();
+        fList = new ArrayList<File>();
+        updateList();
+        updateButtons();
     }
-
+    
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -27,34 +37,43 @@ public class MainFrame extends javax.swing.JFrame {
     private void initComponents() {
         java.awt.GridBagConstraints gridBagConstraints;
 
+        radioGrpMethod = new javax.swing.ButtonGroup();
         btnClear = new javax.swing.JButton();
         btnConvert = new javax.swing.JButton();
         btnQuit = new javax.swing.JButton();
         progBar = new javax.swing.JProgressBar();
-        teFiles = new javax.swing.JTextField();
-        btnAdd = new javax.swing.JButton();
-        jButton1 = new javax.swing.JButton();
+        btnAddFile = new javax.swing.JButton();
+        btnAddDir = new javax.swing.JButton();
+        filler1 = new javax.swing.Box.Filler(new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 32767));
+        filler2 = new javax.swing.Box.Filler(new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 32767));
+        radioBadPix = new javax.swing.JRadioButton();
+        radioInterpolate = new javax.swing.JRadioButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        teFiles = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setMinimumSize(new java.awt.Dimension(602, 400));
         getContentPane().setLayout(new java.awt.GridBagLayout());
 
         btnClear.setText("Clear List");
+        btnClear.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnClearActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
-        gridBagConstraints.gridy = 4;
+        gridBagConstraints.gridy = 3;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.insets = new java.awt.Insets(0, 26, 0, 5);
+        gridBagConstraints.insets = new java.awt.Insets(0, 5, 60, 5);
         getContentPane().add(btnClear, gridBagConstraints);
 
         btnConvert.setText("Convert Files");
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 5;
-        gridBagConstraints.gridwidth = 4;
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 7;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.1;
-        gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 0);
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 0, 5);
         getContentPane().add(btnConvert, gridBagConstraints);
 
         btnQuit.setText("Quit");
@@ -65,9 +84,9 @@ public class MainFrame extends javax.swing.JFrame {
         });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
-        gridBagConstraints.gridy = 5;
+        gridBagConstraints.gridy = 9;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.insets = new java.awt.Insets(0, 25, 0, 5);
+        gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 5);
         getContentPane().add(btnQuit, gridBagConstraints);
 
         progBar.setName(""); // NOI18N
@@ -75,47 +94,84 @@ public class MainFrame extends javax.swing.JFrame {
         progBar.setStringPainted(true);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 6;
+        gridBagConstraints.gridy = 12;
         gridBagConstraints.gridwidth = 5;
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.weighty = 0.2;
         gridBagConstraints.insets = new java.awt.Insets(13, 5, 5, 5);
         getContentPane().add(progBar, gridBagConstraints);
 
+        btnAddFile.setText("Add Files");
+        btnAddFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAddFileActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 1;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 5);
+        getContentPane().add(btnAddFile, gridBagConstraints);
+
+        btnAddDir.setText("Add Directory");
+        btnAddDir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnAddDirActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 2;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.insets = new java.awt.Insets(8, 5, 8, 5);
+        getContentPane().add(btnAddDir, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.VERTICAL;
+        gridBagConstraints.weighty = 0.1;
+        getContentPane().add(filler1, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 8;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.VERTICAL;
+        gridBagConstraints.weighty = 0.1;
+        getContentPane().add(filler2, gridBagConstraints);
+
+        radioGrpMethod.add(radioBadPix);
+        radioBadPix.setText("Set Dead Pixel");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 6;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
+        getContentPane().add(radioBadPix, gridBagConstraints);
+
+        radioGrpMethod.add(radioInterpolate);
+        radioInterpolate.setSelected(true);
+        radioInterpolate.setText("Interpolate");
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 5;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
+        getContentPane().add(radioInterpolate, gridBagConstraints);
+
         teFiles.setEditable(false);
-        teFiles.setBackground(new java.awt.Color(255, 255, 255));
+        teFiles.setColumns(20);
+        teFiles.setRows(5);
+        teFiles.setFocusable(false);
+        jScrollPane1.setViewportView(teFiles);
+
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
-        gridBagConstraints.gridwidth = 5;
-        gridBagConstraints.gridheight = 4;
+        gridBagConstraints.gridwidth = 4;
+        gridBagConstraints.gridheight = 10;
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.weightx = 0.1;
-        gridBagConstraints.weighty = 1.5;
-        gridBagConstraints.insets = new java.awt.Insets(5, 5, 0, 5);
-        getContentPane().add(teFiles, gridBagConstraints);
-
-        btnAdd.setText("Add Files");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 4;
-        gridBagConstraints.gridwidth = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.2;
-        gridBagConstraints.weighty = 0.1;
-        gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 3);
-        getContentPane().add(btnAdd, gridBagConstraints);
-
-        jButton1.setText("Add Directory");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 2;
-        gridBagConstraints.gridy = 4;
-        gridBagConstraints.gridwidth = 2;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gridBagConstraints.weightx = 0.2;
-        gridBagConstraints.weighty = 0.1;
-        gridBagConstraints.insets = new java.awt.Insets(0, 3, 0, 0);
-        getContentPane().add(jButton1, gridBagConstraints);
+        gridBagConstraints.weighty = 0.6;
+        gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 5);
+        getContentPane().add(jScrollPane1, gridBagConstraints);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -124,47 +180,101 @@ public class MainFrame extends javax.swing.JFrame {
         System.exit(0);
     }//GEN-LAST:event_btnQuitActionPerformed
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(MainFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(MainFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(MainFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(MainFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
+    private void btnAddFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddFileActionPerformed
+        doAddFilesViaDlg();
+    }//GEN-LAST:event_btnAddFileActionPerformed
 
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new MainFrame().setVisible(true);
-            }
-        });
+    private void btnAddDirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddDirActionPerformed
+        doAddDirViaDlg();
+    }//GEN-LAST:event_btnAddDirActionPerformed
+
+    private void btnClearActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearActionPerformed
+        doClearList();
+    }//GEN-LAST:event_btnClearActionPerformed
+
+    protected void doClearList()
+    {
+        fList.clear();
+        updateList();
+        updateButtons();
     }
+    
+    protected void doAddFilesViaDlg()
+    {
+        fChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fChooser.setMultiSelectionEnabled(true);
+        int result = fChooser.showOpenDialog(this);
+        
+        if (result != JFileChooser.APPROVE_OPTION) return;
+        
+        for (File f : fChooser.getSelectedFiles())
+        {
+            if (fList.contains(f)) continue;
+            fList.add(f);
+        }
+        
+        updateList();
+        updateButtons();
+    }
+    
+    protected void doAddDirViaDlg()
+    {
+        fChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        fChooser.setMultiSelectionEnabled(false);
+        int result = fChooser.showOpenDialog(this);
+        
+        if (result != JFileChooser.APPROVE_OPTION) return;
+        
+        File selDir = fChooser.getSelectedFile();
+        
+        for (File f : selDir.listFiles())
+        {
+            if (fList.contains(f)) continue;
+            if (!(f.isFile())) continue;
+            fList.add(f);
+        }
+        
+        updateList();
+        updateButtons();
+    }
+    
+    protected void updateList()
+    {
+        String txt = "";
+        for (File f : fList) txt += f.toString() + System.lineSeparator();
+        System.err.println(txt);
+        
+        teFiles.setText(txt);
+    }
+    
+    protected void updateButtons()
+    {
+        if (fList.size() == 0)
+        {
+            btnConvert.setEnabled(false);
+            btnClear.setEnabled(false);
+        }
+        else
+        {
+            btnConvert.setEnabled(true);
+            btnClear.setEnabled(true);
+        }
+        
+    }
+    
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnAdd;
+    private javax.swing.JButton btnAddDir;
+    private javax.swing.JButton btnAddFile;
     private javax.swing.JButton btnClear;
     private javax.swing.JButton btnConvert;
     private javax.swing.JButton btnQuit;
-    private javax.swing.JButton jButton1;
+    private javax.swing.Box.Filler filler1;
+    private javax.swing.Box.Filler filler2;
+    private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JProgressBar progBar;
-    private javax.swing.JTextField teFiles;
+    private javax.swing.JRadioButton radioBadPix;
+    private javax.swing.ButtonGroup radioGrpMethod;
+    private javax.swing.JRadioButton radioInterpolate;
+    private javax.swing.JTextArea teFiles;
     // End of variables declaration//GEN-END:variables
 }

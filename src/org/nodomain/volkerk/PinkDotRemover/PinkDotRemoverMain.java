@@ -40,9 +40,9 @@ public class PinkDotRemoverMain extends LoggingClass {
         // we need at least one file
         if (fList.size() == 0)
         {
-            dbg("No valid files found!");
-            printHelp();
-            //doGUI();
+            //dbg("No valid files found!");
+            //printHelp();
+            doGUI();
             return;
         }
         
