@@ -28,7 +28,7 @@ public class PinkDotRemoverMain extends LoggingClass {
     public static void main(String[] args)
     {
         // set the log level
-        logLvl = LVL_DEBUG;
+        logLvl = LVL_FAIL;
         
         dbg("Command line args: " + strCat(args));
         logPush("Trying to resolve dirs and valid files");

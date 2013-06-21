@@ -7,6 +7,7 @@ package org.nodomain.volkerk.PinkDotRemover;
 import java.io.File;
 import javax.swing.JFileChooser;
 import java.util.*;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -16,6 +17,7 @@ public class MainFrame extends javax.swing.JFrame {
 
     protected final JFileChooser fChooser = new JFileChooser();
     ArrayList<File> fList;
+    protected RemoverWorker remWorker;
 
     /**
      * Creates new form MainFrame
@@ -23,6 +25,8 @@ public class MainFrame extends javax.swing.JFrame {
     public MainFrame() {
         initComponents();
         fList = new ArrayList<File>();
+        remWorker = null;
+        
         updateList();
         updateButtons();
     }
@@ -69,6 +73,11 @@ public class MainFrame extends javax.swing.JFrame {
         getContentPane().add(btnClear, gridBagConstraints);
 
         btnConvert.setText("Convert Files");
+        btnConvert.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnConvertActionPerformed(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 7;
@@ -192,6 +201,10 @@ public class MainFrame extends javax.swing.JFrame {
         doClearList();
     }//GEN-LAST:event_btnClearActionPerformed
 
+    private void btnConvertActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConvertActionPerformed
+        doConversion();
+    }//GEN-LAST:event_btnConvertActionPerformed
+
     protected void doClearList()
     {
         fList.clear();
@@ -238,6 +251,13 @@ public class MainFrame extends javax.swing.JFrame {
         updateButtons();
     }
     
+    protected void doConversion()
+    {
+        progBar.setMaximum(fList.size());
+        remWorker = new RemoverWorker(this, fList);
+        remWorker.execute();
+    }
+    
     protected void updateList()
     {
         String txt = "";
@@ -245,10 +265,23 @@ public class MainFrame extends javax.swing.JFrame {
         System.err.println(txt);
         
         teFiles.setText(txt);
+        teFiles.setCaretPosition(0);
     }
     
     protected void updateButtons()
     {
+        // set a basic state (everything disabled) as long as the conversion is running
+        boolean basicState = true;
+        if ((remWorker != null) && (!(remWorker.isDone()))) basicState = false;
+        btnConvert.setEnabled(basicState);
+        btnAddDir.setEnabled(basicState);
+        btnAddFile.setEnabled(basicState);
+        btnClear.setEnabled(basicState);
+        radioBadPix.setEnabled(basicState);
+        radioInterpolate.setEnabled(basicState);
+        if (!basicState) return;
+        
+        // individual per-button decisions
         if (fList.size() == 0)
         {
             btnConvert.setEnabled(false);
@@ -260,6 +293,24 @@ public class MainFrame extends javax.swing.JFrame {
             btnClear.setEnabled(true);
         }
         
+    }
+    
+    public void globalUpdateHook(ArrayList<File> newList, int filesProcessed)
+    {
+        fList = newList;
+        updateButtons();
+        updateList();
+        
+        if (filesProcessed >= 0)
+        {
+            progBar.setValue(filesProcessed);
+            progBar.setString(filesProcessed + " of " + progBar.getMaximum() + " files processed");
+        }
+        else
+        {
+            progBar.setValue(0);
+            progBar.setString("");
+        }
     }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
