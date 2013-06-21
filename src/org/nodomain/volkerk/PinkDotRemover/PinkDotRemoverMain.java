@@ -64,7 +64,7 @@ public class PinkDotRemoverMain extends LoggingClass {
                 logPop("Done");
 
                 logPush("Starting dot removal for ", f);
-                if (!(pdr.doRemovalInMemory()))
+                if (!(pdr.doRemovalInMemory(true)))
                 {
                     failed("Pink dot removal failed, no data written, program stopped");
                     logPop("Aborted");

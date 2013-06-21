@@ -253,8 +253,11 @@ public class MainFrame extends javax.swing.JFrame {
     
     protected void doConversion()
     {
+        // prepare the progress bar
         progBar.setMaximum(fList.size());
-        remWorker = new RemoverWorker(this, fList);
+        
+        // prepare and start the conversion
+        remWorker = new RemoverWorker(this, fList, radioInterpolate.isSelected());
         remWorker.execute();
     }
     

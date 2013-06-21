@@ -85,9 +85,10 @@ public class PinkDotRemover extends LoggingClass {
     /**
      * Removes the pink dots from the target file
      * 
+     * @param doInterpolation if true, the interpolation algorithm is used; otherwise, the pixel is simply marked as "bad pixel"
      * @return true if the dots could be removed, false in case of errors
      */
-    public boolean doRemovalInMemory()
+    public boolean doRemovalInMemory(boolean doInterpolation)
     {
         // prepare access to the image data
         // we assume that the TIFF file contains exactly one RAW image...
@@ -100,8 +101,6 @@ public class PinkDotRemover extends LoggingClass {
         if (ifdDst == null) dbg("Got null for srcDng");
         
         logPop("Done");
-        
-        ifdSrc.dumpInfo();
         
         int w = (int) ifdSrc.imgWidth();
         int h = (int) ifdSrc.imgLen();
@@ -125,7 +124,8 @@ public class PinkDotRemover extends LoggingClass {
             return false;
         }
         logPush("Starting interpolation of empiric dots");
-        interpolPixel(ifdSrc, ifdDst, dotList, 0, 0);
+        if (doInterpolation) interpolPixel(ifdSrc, ifdDst, dotList, 0, 0);
+        else markBadPixels(ifdSrc, ifdDst, dotList, xOffset, yOffset);
         logPop("Done");
         
         dotList.clear();
@@ -139,7 +139,8 @@ public class PinkDotRemover extends LoggingClass {
             return false;
         }
         logPush("Starting interpolation of grid dots");
-        interpolPixel(ifdSrc, ifdDst, dotList,  xOffset, yOffset);
+        if (doInterpolation) interpolPixel(ifdSrc, ifdDst, dotList,  xOffset, yOffset);
+        else markBadPixels(ifdSrc, ifdDst, dotList, xOffset, yOffset);
         logPop("Done");
         return true;
     }
@@ -209,6 +210,24 @@ public class PinkDotRemover extends LoggingClass {
         
     }
     
+    /**
+     * Replaces a pixel intensity with a 0 to indicate a bad pixel
+     * Leaves the actual interpolation to the RAW processor later on
+     * 
+     * @param ifdSrc ImageFileHandler for the distorted source image data (read)
+     * @param ifdDst ImageFileHandler for the improved image data (write)
+     * @param dotList a list of x,y-coordinates of the dots to fix
+     * @param xOffset offset between the x-coordinates reported from the dot list and the coordinates in the file; compensates for borders
+     * @param yOffset offset between the y-coordinates reported from the dot list and the coordinates in the file; compensates for borders
+     */
+    protected void markBadPixels(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, ArrayList<int[]> dotList, int xOffset, int yOffset)
+    {
+        for (int[] dot : dotList)
+        {
+            ifdDst.CFA_setPixel(dot[0] + xOffset, dot[1] + yOffset, 0);
+        }
+    
+    }
     
     /**
      * Writes the contents of the destination image to a DNG file. The filename

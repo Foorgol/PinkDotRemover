@@ -17,11 +17,13 @@ public class RemoverWorker extends SwingWorker<ArrayList<File>, Integer>
 {
     protected ArrayList<File> fList;
     protected MainFrame parent;
+    protected boolean doInterpolation;
     
-    public RemoverWorker(MainFrame _parent, ArrayList<File> _fList)
+    public RemoverWorker(MainFrame _parent, ArrayList<File> _fList, boolean _doInterpolation)
     {
         fList = _fList;
         parent = _parent;
+        doInterpolation = _doInterpolation;
     }
     
     @Override
@@ -39,7 +41,7 @@ public class RemoverWorker extends SwingWorker<ArrayList<File>, Integer>
             try
             {
                 pdr = new PinkDotRemover(f.toString());
-                if (!(pdr.doRemovalInMemory()))
+                if (!(pdr.doRemovalInMemory(doInterpolation)))
                 {
                     i++;
                 }
@@ -73,7 +75,11 @@ public class RemoverWorker extends SwingWorker<ArrayList<File>, Integer>
         parent.globalUpdateHook(fList, -1);
         if (fList.size() != 0)
         {
-            JOptionPane.showMessageDialog(null, "One or more files could not be converted", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(parent, "One or more files could not be converted", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        else
+        {
+            JOptionPane.showMessageDialog(parent, "All files converted", "Success", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }
