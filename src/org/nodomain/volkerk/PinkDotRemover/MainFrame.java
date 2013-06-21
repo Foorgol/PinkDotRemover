@@ -262,7 +262,6 @@ public class MainFrame extends javax.swing.JFrame {
     {
         String txt = "";
         for (File f : fList) txt += f.toString() + System.lineSeparator();
-        System.err.println(txt);
         
         teFiles.setText(txt);
         teFiles.setCaretPosition(0);
