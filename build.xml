@@ -10,6 +10,20 @@
 <project name="PinkDotRemover" default="default" basedir=".">
     <description>Builds, tests, and runs the project PinkDotRemover.</description>
     <import file="nbproject/build-impl.xml"/>
+    
+    <!-- copy the dot data to the dist folder for JAR execution -->
+    <target name="-post-jar">
+      <copy flatten="true" todir="${dist.dir}/dotData">
+        <fileset dir="dotData" includes="**"/>
+      </copy>
+    </target>
+
+    <!-- copy the dot data to the build folder for execution from the IDE -->
+    <target name="-post-compile">
+      <copy flatten="true" todir="${build.dir}/classes/dotData">
+        <fileset dir="dotData" includes="**"/>
+      </copy>
+    </target>
     <!--
 
     There exist several targets which are by default empty and which can be 

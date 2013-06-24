@@ -14,6 +14,7 @@ package org.nodomain.volkerk.PinkDotRemover;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
@@ -42,6 +43,8 @@ public class PinkDotRemover extends LoggingClass {
      * an image handler for the output file -- will be initialized from the input file
      */
     protected TIFFhandler dstDng;
+    
+    protected static final String DOT_DATA_DIR = "dotData";
     
     /**
      * Constructor. Checks for a valid file name and tries to open the file
@@ -446,11 +449,11 @@ public class PinkDotRemover extends LoggingClass {
         preLog(LVL_DEBUG, "Trying to determine resource name");
         if ((w == 1280) && (h == 720))
         {
-            resName = "res/pixCoord_threshold2068.txt";
+            resName = "pixCoord_threshold2068.txt";
         }
         else if ((w == 1808) && (h == 727))
         {
-            resName = "res/pixCoord_SilentPic_threshold2085.txt";
+            resName = "pixCoord_SilentPic_threshold2085.txt";
         }
         
         if (resName.length() == 0)
@@ -465,9 +468,11 @@ public class PinkDotRemover extends LoggingClass {
         logPush("Reading and parsing resource");
         try
         {
-            // open the dot data file as a resource (e. g. in the JAR file)
-            preLog(LVL_DEBUG, "getResourceAsStream");
-            InputStream in = this.getClass().getResourceAsStream(resName);
+            // open the dot data file as a files relative to the JAR folder
+            preLog(LVL_DEBUG, "Open dot location source file");
+            String jarPath = PinkDotRemover.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+            if (jarPath.endsWith(".jar")) jarPath = new File(jarPath).getParent();
+            InputStream in = new FileInputStream(Paths.get(jarPath, DOT_DATA_DIR, resName).toFile());
             if (in == null) resultLog(LOG_FAIL);
             else resultLog(LOG_OK);
             
