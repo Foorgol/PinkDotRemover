@@ -15,3 +15,8 @@
 #
 R :: 650M :: RefTest :: 800,600 :: 650D :: Silent_1808x727 :: 70,70
 
+#
+# Silent DNGs in movie mode
+#
+R :: 650D :: SilentMovie :: 1808,1190 :: 650D :: Video_1270x720 :: 304, 246
+
