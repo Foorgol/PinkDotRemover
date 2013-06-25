@@ -31,7 +31,8 @@ public class MainFrame extends javax.swing.JFrame {
     protected DotLocationDB db;
     
     protected static final String DEFAULT_DOT_DATA_DIR = "dotData";
-
+    protected static final String DEFAULT_CAM_TYPE = "650D";
+    
     /**
      * Creates new form MainFrame
      */
@@ -71,6 +72,7 @@ public class MainFrame extends javax.swing.JFrame {
         radioInterpolate = new javax.swing.JRadioButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         teFiles = new javax.swing.JTextArea();
+        cbCam = new javax.swing.JComboBox();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setMinimumSize(new java.awt.Dimension(602, 400));
@@ -199,6 +201,14 @@ public class MainFrame extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 5);
         getContentPane().add(jScrollPane1, gridBagConstraints);
 
+        cbCam.setEnabled(false);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 4;
+        gridBagConstraints.gridy = 4;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.insets = new java.awt.Insets(0, 5, 5, 5);
+        getContentPane().add(cbCam, gridBagConstraints);
+
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
@@ -273,8 +283,12 @@ public class MainFrame extends javax.swing.JFrame {
         // prepare the progress bar
         progBar.setMaximum(fList.size());
         
+        // determine the selected camera model
+        String cam = (String) cbCam.getSelectedItem();
+        if (cam == null) cam = DEFAULT_CAM_TYPE;
+        
         // prepare and start the conversion
-        remWorker = new RemoverWorker(this, db, fList, radioInterpolate.isSelected());
+        remWorker = new RemoverWorker(this, db, cam, fList, radioInterpolate.isSelected());
         remWorker.execute();
     }
     
@@ -298,6 +312,7 @@ public class MainFrame extends javax.swing.JFrame {
         btnClear.setEnabled(basicState);
         radioBadPix.setEnabled(basicState);
         radioInterpolate.setEnabled(basicState);
+        cbCam.setEnabled(basicState);
         if (!basicState) return;
         
         // individual per-button decisions
@@ -315,6 +330,11 @@ public class MainFrame extends javax.swing.JFrame {
         if (db == null)
         {
             btnConvert.setEnabled(false);
+            cbCam.setEnabled(false);
+        }
+        else
+        {
+            cbCam.setEnabled(true);
         }
         
     }
@@ -375,6 +395,18 @@ public class MainFrame extends javax.swing.JFrame {
         {
             System.exit(42);
         }
+        
+        // populate the combo box for the cam selection
+        cbCam.removeAllItems();
+        for (String cam : db.getAllModels())
+        {
+            cbCam.addItem(cam);
+        }
+        cbCam.setEnabled(true);
+        
+        // select the default, if possible. Or just the first item
+        cbCam.setSelectedIndex(0);
+        cbCam.setSelectedItem(DEFAULT_CAM_TYPE);
     }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -383,6 +415,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JButton btnClear;
     private javax.swing.JButton btnConvert;
     private javax.swing.JButton btnQuit;
+    private javax.swing.JComboBox cbCam;
     private javax.swing.Box.Filler filler1;
     private javax.swing.Box.Filler filler2;
     private javax.swing.JScrollPane jScrollPane1;

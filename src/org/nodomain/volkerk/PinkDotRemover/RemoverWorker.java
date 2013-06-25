@@ -19,13 +19,15 @@ public class RemoverWorker extends SwingWorker<ArrayList<File>, Integer>
     protected MainFrame parent;
     protected boolean doInterpolation;
     protected DotLocationDB db;
+    protected String camType;
     
-    public RemoverWorker(MainFrame _parent, DotLocationDB _db, ArrayList<File> _fList, boolean _doInterpolation)
+    public RemoverWorker(MainFrame _parent, DotLocationDB _db, String _camType, ArrayList<File> _fList, boolean _doInterpolation)
     {
         fList = _fList;
         parent = _parent;
         doInterpolation = _doInterpolation;
         db = _db;
+        camType = _camType;
     }
     
     @Override
@@ -42,7 +44,7 @@ public class RemoverWorker extends SwingWorker<ArrayList<File>, Integer>
             PinkDotRemover pdr;
             try
             {
-                pdr = new PinkDotRemover(f.toString(), db, null);
+                pdr = new PinkDotRemover(f.toString(), db, camType);
                 if (!(pdr.doRemovalInMemory(doInterpolation)))
                 {
                     i++;

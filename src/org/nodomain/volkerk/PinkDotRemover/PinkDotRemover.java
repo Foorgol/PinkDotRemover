@@ -53,7 +53,6 @@ public class PinkDotRemover extends LoggingClass {
      * an image handler for the output file -- will be initialized from the input file
      */
     protected TIFFhandler dstDng;
-    
     protected static final String DEFAULT_CAM_TYPE = "650D";
     
     /**
@@ -129,7 +128,7 @@ public class PinkDotRemover extends LoggingClass {
         DotSet ds = db.getDotSetByModelAndResolution(camType, w, h);
         if (ds == null)
         {
-            failed("No dot pattern for image " + w + "x" + h + " available!");
+            failed("No dot pattern for image size " + w + "x" + h + " and cam type ", camType, " available!");
             return false;
         }
         dbg("Found dot set for image: ", ds.getCombinedName());
