@@ -40,18 +40,30 @@ public class PinkDotRemover extends LoggingClass {
     protected TIFFhandler srcDng;
     
     /**
+     * A handle for the dot location database
+     */
+    DotLocationDB db;
+    
+    /**
+     * The cam type to use
+     */
+    String camType;
+    
+    /**
      * an image handler for the output file -- will be initialized from the input file
      */
     protected TIFFhandler dstDng;
     
-    protected static final String DOT_DATA_DIR = "dotData";
+    protected static final String DEFAULT_CAM_TYPE = "650D";
     
     /**
      * Constructor. Checks for a valid file name and tries to open the file
      * 
      * @param fName the name / path of the DNG file
+     * @param db is the database with dot locations for all cams and resolutions
+     * @param camType is the name of the camera type
      */
-    public PinkDotRemover(String fName)
+    public PinkDotRemover(String fName, DotLocationDB _db, String _camType)
     {
         preLog(LVL_DEBUG, "Trying to instanciate File for ", fName);
         File src = new File(fName);
@@ -83,6 +95,11 @@ public class PinkDotRemover extends LoggingClass {
         logPop("Done");
         
         srcFileName = fName;
+        
+        db = _db;
+        
+        camType = DEFAULT_CAM_TYPE;
+        if ((_camType != null) && (_camType.length() != 0)) camType = _camType;
     }
     
     /**
@@ -108,43 +125,22 @@ public class PinkDotRemover extends LoggingClass {
         int w = (int) ifdSrc.imgWidth();
         int h = (int) ifdSrc.imgLen();
         
-        // the coordinates were manually picked from a demosaiced file.
-        // If the DNG has a border, this border was cropped by the demosaicer
-        // and we have to add the cropped border to the coordinates
-        int xOffset = (int) ifdSrc.DNG_ActiveArea()[0];
-        int yOffset = (int) ifdSrc.DNG_ActiveArea()[1];
-        
-        // prepare a list of x,y-values representing the distorted dots
-        ArrayList<int[]> dotList;
-        
-        // step 1: get the empirically determined dot coordinates
-        logPush("Getting empiric dot pattern");
-        dotList = getEmpiricDotPattern(w, h);
-        logPop("Done");
-        if (dotList == null)
+        // Let's see if we have the dot pattern for this type of image
+        DotSet ds = db.getDotSetByModelAndResolution(camType, w, h);
+        if (ds == null)
         {
-            failed("No empiric dot pattern for image " + w + "x" + h + " available!");
+            failed("No dot pattern for image " + w + "x" + h + " available!");
             return false;
         }
-        logPush("Starting interpolation of empiric dots");
-        if (doInterpolation) interpolPixel(ifdSrc, ifdDst, dotList, 0, 0);
-        else markBadPixels(ifdSrc, ifdDst, dotList, xOffset, yOffset);
-        logPop("Done");
+        dbg("Found dot set for image: ", ds.getCombinedName());
         
-        dotList.clear();
-        // step 2: get the "regular" or "grid" dot pattern
-        logPush("Getting grid dot pattern");
-        dotList = getGridDotPattern(w, h);
-        logPop("Done");
-        if (dotList == null)
-        {
-            failed("No grid dot pattern for image " + w + "x" + h + " available!");
-            return false;
-        }
-        logPush("Starting interpolation of grid dots");
-        if (doInterpolation) interpolPixel(ifdSrc, ifdDst, dotList,  xOffset, yOffset);
-        else markBadPixels(ifdSrc, ifdDst, dotList, xOffset, yOffset);
-        logPop("Done");
+        int[][] dotList = ds.getAllCoordinates();
+        
+        if (doInterpolation) interpolPixel(ifdSrc, ifdDst, dotList);
+        else markBadPixels(ifdSrc, ifdDst, dotList);
+        
+        dbg("Conversion in memory completed!");
+        
         return true;
     }
     
@@ -156,21 +152,19 @@ public class PinkDotRemover extends LoggingClass {
      * @param ifdSrc ImageFileHandler for the distorted source image data (read)
      * @param ifdDst ImageFileHandler for the improved image data (write)
      * @param dotList a list of x,y-coordinates of the dots to fix
-     * @param xOffset offset between the x-coordinates reported from the dot list and the coordinates in the file; compensates for borders
-     * @param yOffset offset between the y-coordinates reported from the dot list and the coordinates in the file; compensates for borders
      */
-    protected void interpolPixel(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, ArrayList<int[]> dotList, int xOffset, int yOffset)
+    protected void interpolPixel(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, int[][] dotList)
     {
         int w = (int) ifdSrc.imgWidth();
         int h = (int) ifdSrc.imgLen();
         
         for (int[] dot : dotList)
         {
-            int x = dot[0] + xOffset;
-            int y = dot[1] + yOffset;
+            int x = dot[0];
+            int y = dot[1];
             
             // don't fix pixel on image borders
-            if ((x < 2) || (x > (w - 3)) || (y < 2) || (y > (h - 3))) continue;
+            if ((x < 2) || (x > (w - 3)) || (y < 2) || (y > (h - 4))) continue;
             
             // determine intensity gradients in all four directions
             int g1 = ifdSrc.CFA_getPixel(x, y - 2) - ifdSrc.CFA_getPixel(x, y + 2); // top-down
@@ -220,14 +214,12 @@ public class PinkDotRemover extends LoggingClass {
      * @param ifdSrc ImageFileHandler for the distorted source image data (read)
      * @param ifdDst ImageFileHandler for the improved image data (write)
      * @param dotList a list of x,y-coordinates of the dots to fix
-     * @param xOffset offset between the x-coordinates reported from the dot list and the coordinates in the file; compensates for borders
-     * @param yOffset offset between the y-coordinates reported from the dot list and the coordinates in the file; compensates for borders
      */
-    protected void markBadPixels(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, ArrayList<int[]> dotList, int xOffset, int yOffset)
+    protected void markBadPixels(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, int[][] dotList)
     {
         for (int[] dot : dotList)
         {
-            ifdDst.CFA_setPixel(dot[0] + xOffset, dot[1] + yOffset, 0);
+            ifdDst.CFA_setPixel(dot[0], dot[1], 0);
         }
     
     }
@@ -264,246 +256,6 @@ public class PinkDotRemover extends LoggingClass {
         dbg("File saved successfully");
         
         return dstPath.toString();
-    }
-    
-    /**
-     * Retrieves the coordinates for the regular, grid-like dots for a specific image size
-     * 
-     * @param w image width
-     * @param h image height
-     * @return a list of (x, y)-coordinates or null if no data for the requested image size is available
-     */
-    protected ArrayList<int[]> getGridDotPattern(int w, int h)
-    {
-        int[][] gridData = null;
-        
-        if ((w == 1280) && (h == 720))
-        {
-            gridData = new int[][] {
-                {511, 213, 767, 263, 8, 10},
-                {507, 219, 763, 269, 8, 10},
-                {504, 234, 760, 304, 8, 10},
-                {504, 334, 760, 404, 8, 10},
-                {508, 338, 764, 408, 8, 10},
-                {511, 413, 767, 463, 8, 10},
-                {507, 419, 763, 469, 8, 10},
-                {504, 434, 760, 504, 8, 10},
-                {508, 238, 764, 308, 8, 10},
-                {312, 274, 496, 284, 8, 10},
-                {316, 278, 500, 288, 8, 10},
-                {768, 274, 952, 284, 8, 10},
-                {768, 284, 956, 288, 8, 10},
-                {319, 313, 359, 323, 8, 10},
-                {315, 319, 955, 329, 8, 10},
-                {511, 333, 767, 363, 8, 10},
-                {507, 339, 763, 369, 8, 10},
-                
-                {312, 354, 496, 364, 8, 10},
-                {316, 358, 500, 368, 8, 10},
-                {312, 394, 496, 404, 8, 10},
-                {316, 398, 500, 408, 8, 10},
-                {312, 434, 496, 444, 8, 10},
-                {316, 438, 500, 448, 8, 10},
-                {319, 433, 503, 443, 8, 10},
-                {315, 439, 499, 449, 8, 10},
-                
-                {312+456, 354, 496+456, 364, 8, 10},
-                {316+456, 358, 500+456, 368, 8, 10},
-                {312+456, 394, 496+456, 404, 8, 10},
-                {316+456, 398, 500+456, 408, 8, 10},
-                {312+456, 434, 496+456, 444, 8, 10},
-                {316+456, 438, 500+456, 448, 8, 10},
-                {319+456, 433, 503+456, 443, 8, 10},
-                {315+456, 439, 499+456, 449, 8, 10},
-                {316+456, 278, 500+456, 288, 8, 10},
-                
-                {508, 438, 764, 508, 8, 10},
-                {367, 313, 959, 323, 8, 10},
-                {775, 353, 959, 363, 8, 10},
-                {771, 359, 955, 369, 8, 10},
-                
-                {319, 273, 959, 283, 8, 10},
-                {315, 279, 955, 289, 8, 10},
-                
-                {511, 293, 767, 303, 8, 10},
-                {507, 299, 763, 309, 8, 10},
-                
-                {319, 393, 959, 403, 8, 10},
-                {315, 399, 955, 409, 8, 10},
-                
-                {511, 493, 767, 503, 8, 10},
-                {507, 499, 763, 509, 8, 10},
-                
-                {319, 353, 503, 363, 8, 10},
-                {315, 359, 499, 369, 8, 10},
-                
-                {504, 214, 760, 224, 8, 10},
-                {508, 218, 764, 228, 8, 10},
-                
-                {312, 314, 952, 324, 8, 10},
-                {308, 318, 956, 328, 8, 10},
-                
-                {496, 414, 760, 424, 8, 10},
-                {516, 418, 764, 428, 8, 10},
-                
-                {511, 373, 767, 383, 8, 10},
-                {507, 379, 763, 389, 8, 10},
-                
-                {511, 473, 767, 483, 8, 10},
-                {507, 479, 763, 489, 8, 10}
-            };
-        }
-        
-        if ((w == 1808) && (h == 727))
-        {
-            gridData = new int[][] {
-                {740, 262, 996, 430, 8, 12},
-                {736, 268, 992, 436, 8, 12},
-                //{739, 299, 995, 371, 8, 12},
-                {739, 299, 995, 311, 8, 12},
-                {739, 359, 995, 371, 8, 12},
-                {735, 305, 991, 317, 8, 12},
-                {735, 365, 991, 377, 8, 12},
-                
-                {548, 310, 732, 310, 8, 12},
-                {544, 316, 728, 316, 8, 12},
-                {547, 311, 731, 311, 8, 12},
-                {543, 317, 727, 317, 8, 12},
-                
-                {548, 334, 732, 358, 8, 12},
-                {544, 340, 728, 364, 8, 12},
-                
-                {548, 382, 1188, 382, 8, 12},
-                {544, 388, 1184, 388, 8, 12},
-                
-                {548+456, 310, 732+456, 310, 8, 12},
-                {544+456, 316, 728+456, 316, 8, 12},
-                {547+456, 311, 731+456, 311, 8, 12},
-                {543+456, 317, 727+456, 317, 8, 12},
-                
-                {548+456, 334, 732+456, 358, 8, 12},
-                {544+456, 340, 728+456, 364, 8, 12},
-                
-                {547, 335, 1187, 359, 8, 12},
-                {543, 341, 1183, 365, 8, 12},
-                
-                {739, 263, 995, 287, 8, 12},
-                {735, 269, 991, 293, 8, 12},
-                {739, 323, 995, 323, 8, 12},
-                {735, 329, 991, 329, 8, 12},
-                
-                {547, 383, 1187, 383, 8, 12},
-                {543, 389, 1183, 398, 8, 9},
-                
-                {735, 401, 991, 437, 8, 12},
-                
-                {739, 395, 995, 431, 8, 12},
-                
-                
-                
-            };
-        
-        }
-        
-        // convert the grid data into single dot coordinates
-        if (gridData == null) return null;
-        
-        ArrayList<int[]> result = new ArrayList();
-        for (int[] gridBlock : gridData)
-        {
-            int minX = gridBlock[0];
-            int minY = gridBlock[1];
-            int maxX = gridBlock[2];
-            int maxY = gridBlock[3];
-            int stepX = gridBlock[4];
-            int stepY = gridBlock[5];
-
-            // "unwrap" the gridd
-            for (int y = minY; y <= maxY; y += stepY)
-            {
-                for (int x = minX; x <= maxX; x += stepX)
-                {
-                    // add the regular coordinates to the empiric coordinates from before
-                    result.add(new int[] {x, y});
-                }
-            }
-        }
-            
-        return result;
-    }
-    
-    /**
-     * Reads "empiric" dot coordinates stored in a text file in the CLASSPATH
-     * 
-     * @param w image width
-     * @param h image height
-     * @return a list of (x, y)-coordinates or null if no data for the requested image size is available
-     */
-    protected ArrayList<int[]> getEmpiricDotPattern(int w, int h)
-    {
-        ArrayList<int[]> result = null;
-        
-        String resName = "";
-        
-        
-        preLog(LVL_DEBUG, "Trying to determine resource name");
-        if ((w == 1280) && (h == 720))
-        {
-            resName = "pixCoord_threshold2068.txt";
-        }
-        else if ((w == 1808) && (h == 727))
-        {
-            resName = "pixCoord_SilentPic_threshold2085.txt";
-        }
-        
-        if (resName.length() == 0)
-        {
-            resultLog(LOG_FAIL);
-            return null;
-        }
-        
-        resultLog(LOG_OK);
-        dbg("Resource name is ", resName);
-            
-        logPush("Reading and parsing resource");
-        try
-        {
-            // open the dot data file as a files relative to the JAR folder
-            preLog(LVL_DEBUG, "Open dot location source file");
-            String jarPath = PinkDotRemover.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-            if (jarPath.endsWith(".jar")) jarPath = new File(jarPath).getParent();
-            InputStream in = new FileInputStream(Paths.get(jarPath, DOT_DATA_DIR, resName).toFile());
-            if (in == null) resultLog(LOG_FAIL);
-            else resultLog(LOG_OK);
-            
-            preLog(LVL_DEBUG, "instanciate InputStreamReader");
-            InputStreamReader ir = new InputStreamReader(in);
-            if (ir == null) resultLog(LOG_FAIL);
-            else resultLog(LOG_OK);
-            
-            preLog(LVL_DEBUG, "instanciate BufferedReader");
-            BufferedReader b  = new BufferedReader(ir);
-            if (b == null) resultLog(LOG_FAIL);
-            else resultLog(LOG_OK);
-
-            result = new ArrayList();
-
-            // read the file line-by-line and convert the ASCII-text into numbers
-            String line;
-            while ((line = b.readLine()) != null)
-            {
-                int x = Integer.parseInt(line.split(",")[0].trim());
-                int y = Integer.parseInt(line.split(",")[1].trim());
-                result.add(new int[] {x, y});
-            }
-        }
-        catch (Exception e)
-        {
-            failed("Exception in getEmpiricDotPattern: ", e.getMessage());
-        }
-        logPop("Done");
-            
-        return result;
     }
     
 }

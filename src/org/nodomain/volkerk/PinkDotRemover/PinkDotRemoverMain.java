@@ -13,6 +13,7 @@
 package org.nodomain.volkerk.PinkDotRemover;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.*;
 import org.nodomain.volkerk.LoggingLib.LoggingClass;
 
@@ -28,7 +29,7 @@ public class PinkDotRemoverMain extends LoggingClass {
     public static void main(String[] args)
     {
         // set the log level
-        logLvl = LVL_FAIL;  // bad hack
+        logLvl = LVL_DEBUG;  // bad hack
         
         dbg("Command line args: " + strCat(args));
         logPush("Trying to resolve dirs and valid files");
@@ -48,6 +49,16 @@ public class PinkDotRemoverMain extends LoggingClass {
         
         dbg("At least one valid file found for conversion.");
         
+        logPush("Trying to init dot location database");
+        preLog(LVL_DEBUG, "Trying to determine JAR / execution path");
+        String jarPath = PinkDotRemover.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        if (jarPath.endsWith(".jar")) jarPath = new File(jarPath).getParent();
+        resultLog(LOG_OK);
+        dbg("JAR path is ", jarPath);
+        DotLocationDB db = new DotLocationDB(Paths.get(jarPath, "dotData").toString());
+        logPop("Done");
+        db.dumpInfo();
+        
         // loop over all files and convert them one by one
         logPush("Looping over all found files for conversion");
         int cnt = 1;
@@ -60,7 +71,7 @@ public class PinkDotRemoverMain extends LoggingClass {
             try
             {
                 logPush("Instanciating dot remover class for ", f);
-                pdr = new PinkDotRemover(f.toString());
+                pdr = new PinkDotRemover(f.toString(), db, null);
                 logPop("Done");
 
                 logPush("Starting dot removal for ", f);

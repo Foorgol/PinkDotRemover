@@ -18,12 +18,14 @@ public class RemoverWorker extends SwingWorker<ArrayList<File>, Integer>
     protected ArrayList<File> fList;
     protected MainFrame parent;
     protected boolean doInterpolation;
+    protected DotLocationDB db;
     
-    public RemoverWorker(MainFrame _parent, ArrayList<File> _fList, boolean _doInterpolation)
+    public RemoverWorker(MainFrame _parent, DotLocationDB _db, ArrayList<File> _fList, boolean _doInterpolation)
     {
         fList = _fList;
         parent = _parent;
         doInterpolation = _doInterpolation;
+        db = _db;
     }
     
     @Override
@@ -40,7 +42,7 @@ public class RemoverWorker extends SwingWorker<ArrayList<File>, Integer>
             PinkDotRemover pdr;
             try
             {
-                pdr = new PinkDotRemover(f.toString());
+                pdr = new PinkDotRemover(f.toString(), db, null);
                 if (!(pdr.doRemovalInMemory(doInterpolation)))
                 {
                     i++;

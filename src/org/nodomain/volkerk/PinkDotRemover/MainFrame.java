@@ -13,6 +13,7 @@
 package org.nodomain.volkerk.PinkDotRemover;
 
 import java.io.File;
+import java.nio.file.Paths;
 import javax.swing.JFileChooser;
 import java.util.*;
 
@@ -25,6 +26,11 @@ public class MainFrame extends javax.swing.JFrame {
     protected final JFileChooser fChooser = new JFileChooser();
     ArrayList<File> fList;
     protected RemoverWorker remWorker;
+    protected LocationDatabaseInitWorker initWorker;
+    
+    protected DotLocationDB db;
+    
+    protected static final String DEFAULT_DOT_DATA_DIR = "dotData";
 
     /**
      * Creates new form MainFrame
@@ -33,9 +39,13 @@ public class MainFrame extends javax.swing.JFrame {
         initComponents();
         fList = new ArrayList<File>();
         remWorker = null;
+        initWorker = null;
+        db = null;
         
         updateList();
         updateButtons();
+        
+        doDatabaseInit();
     }
     
     /**
@@ -264,7 +274,7 @@ public class MainFrame extends javax.swing.JFrame {
         progBar.setMaximum(fList.size());
         
         // prepare and start the conversion
-        remWorker = new RemoverWorker(this, fList, radioInterpolate.isSelected());
+        remWorker = new RemoverWorker(this, db, fList, radioInterpolate.isSelected());
         remWorker.execute();
     }
     
@@ -302,6 +312,11 @@ public class MainFrame extends javax.swing.JFrame {
             btnClear.setEnabled(true);
         }
         
+        if (db == null)
+        {
+            btnConvert.setEnabled(false);
+        }
+        
     }
     
     public void globalUpdateHook(ArrayList<File> newList, int filesProcessed)
@@ -319,6 +334,46 @@ public class MainFrame extends javax.swing.JFrame {
         {
             progBar.setValue(0);
             progBar.setString("");
+        }
+    }
+    
+    public void doDatabaseInit()
+    {
+        // Determine the JAR's path
+        String jarPath = PinkDotRemover.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        if (jarPath.endsWith(".jar")) jarPath = new File(jarPath).getParent();
+        
+        // the dir with the dot data
+        String dotDataDir = Paths.get(jarPath, DEFAULT_DOT_DATA_DIR).toString();
+        
+        // switch the progress bar to indetermined mode
+        progBar.setIndeterminate(true);
+        progBar.setString("Initializing dot location database...");
+        
+        // prepare and run the worker thread
+        initWorker = new LocationDatabaseInitWorker(this, dotDataDir);
+        initWorker.execute();
+        
+        updateButtons();
+    }
+    
+    public void dbInitDone()
+    {
+        progBar.setIndeterminate(false);
+        progBar.setString("");
+        
+        try
+        {
+            db = initWorker.get();
+        }
+        catch (Exception e)
+        {
+            db = null;
+        }
+        
+        if (db == null)
+        {
+            System.exit(42);
         }
     }
     
