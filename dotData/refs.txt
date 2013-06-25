@@ -1,5 +1,17 @@
 #
-# comment
+# Legend for defining a "referred" dot set
+# R :: <NewCam> :: <NewName> :: <NewRes> :: <ExistCam> :: <ExistSet> :: <Offset>
+#
+# NewCam = Camera model for the new dot set, "650D" for instance
+# NewName = some arbitrary, unique name for the new dot set
+# NewRes = RAW resolution the new dot set applies to (as CSV)
+# ExistCam = Name of the camera model for the referred dot set
+# ExistSet = Name of the referred dot set for that cam
+# Offset = coordinate offset from existing to new dot set as CSV
+#
+
+#
+# Dummy example
 #
 R :: 650M :: RefTest :: 800,600 :: 650D :: Silent_1808x727 :: 70,70
 

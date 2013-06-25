@@ -1,4 +1,18 @@
 #
+# Legend for defining a new dot set:
+# N :: <Camera Model> :: <Dot Set Name> :: <DNG Name> :: <Threshold>
+#
+# Camera Model = "650D", for instance
+# Dot Set Name = some arbitrary, unique name
+# DNG Name = name of the DNG file to extract the "empiric" dots from
+# Threshold = intensity threshold for finding the dots in the DNG
+#
+# After this "control line", the grid dots definitions start as CSV
+#
+# x0, y0, x1, y1, stepX, stepY
+#
+
+#
 # Canon EOS 650D, silent picture in photo mode
 #
 N :: 650D :: Silent_1808x727 :: 650D_Silent_1808x727.DNG :: 2085
