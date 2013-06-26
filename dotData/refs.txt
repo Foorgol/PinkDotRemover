@@ -119,3 +119,8 @@ R :: 650D :: Video_1600x534 :: 1600, 534 :: 650D :: Video_1280x720 :: 160, -93
 R :: 650D :: Video_1728x576 :: 1728, 576 :: 650D :: Video_1280x720 :: 224, -72
 
 
+#
+# Video modes, EOSM, 16:9, NOT WORKING SO FAR
+#
+# R :: EOSM :: EOSM_1728x586 :: 1728, 586 :: EOSM :: EOSM_Silent_1734x695 :: -4, -56
+# R :: EOSM :: EOSM_1600x542 :: 1600, 542 :: EOSM :: EOSM_Silent_1734x695 :: -70, -76
