@@ -12,14 +12,9 @@
 
 package org.nodomain.volkerk.PinkDotRemover;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import org.nodomain.volkerk.LoggingLib.LoggingClass;
 import org.nodomain.volkerk.SimpleTIFFlib.ImageFileDirectory;
 import org.nodomain.volkerk.SimpleTIFFlib.TIFFhandler;

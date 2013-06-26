@@ -49,7 +49,7 @@ R :: 650D :: Video_1152x648 :: 1152, 648 :: 650D :: Video_1280x720 :: -64, -36
 R :: 650D :: Video_1152x490 :: 1152, 490 :: 650D :: Video_1280x720 :: -64, -115
 
 #
-# Video modes, 650D, 1:85 : 1, NOT VERIFIED
+# Video modes, 650D, 1.85:1, NOT VERIFIED
 #
 R :: 650D :: Video_1152x622 :: 1152, 622 :: 650D :: Video_1280x720 :: -64, -49
 R :: 650D :: Video_1280x692 :: 1280, 692 :: 650D :: Video_1280x720 :: 0, -14
