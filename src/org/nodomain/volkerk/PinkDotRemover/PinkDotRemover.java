@@ -48,6 +48,7 @@ public class PinkDotRemover extends LoggingClass {
      * an image handler for the output file -- will be initialized from the input file
      */
     protected TIFFhandler dstDng;
+    
     protected static final String DEFAULT_CAM_TYPE = "650D";
     
     /**

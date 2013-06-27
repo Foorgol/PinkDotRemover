@@ -13,9 +13,11 @@
 package org.nodomain.volkerk.PinkDotRemover;
 
 import java.io.File;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import org.nodomain.volkerk.LoggingLib.LoggingClass;
@@ -33,6 +35,10 @@ public class DotLocationDB extends LoggingClass {
     protected static final String NEW_SET_TOKEN = "N";
     protected static final String REF_SET_TOKEN = "R";
     protected static final String DOT_FILE_EXT = "txt";
+    
+    protected static final int REF_DOT_SET_650D_W = 1280;
+    protected static final int REF_DOT_SET_650D_H = 720;
+    protected static final String REF_DOT_SET_650D_CAM_NAME = "650D";
     
     /**
      * All dot sets in this database
@@ -340,6 +346,21 @@ public class DotLocationDB extends LoggingClass {
         
     }
     
+    public DotSet copyDotSetWithOffset(DotSet src, int w, int h, int dx, int dy)
+    {
+        String cam = src.getCamType();
+        String res = w + "x" + h;
+        String name = new BigInteger(64, new SecureRandom()).toString(32);
+        
+        DotSet result = new DotSet(cam, name, res, 0, 0);
+        for (int[] dot : src.getAllCoordinates())
+        {
+            result.addCoordinates(dot[0] + dx, dot[1] + dy);
+        }
+        
+        return result;
+    }
+    
     protected int[] intArrayFromCSV(String csv)
     {
         // there are a lot of things that can go wrong here
@@ -370,12 +391,71 @@ public class DotLocationDB extends LoggingClass {
     
     public DotSet getDotSetByModelAndResolution(String modelName, int w, int h)
     {
+        // Try to find an explicit match in the database
+        preLog(LVL_DEBUG, "Try to find explicit dot location pos for ", w, "x", h);
         for (DotSet d : ds)
         {
-            if (d.isSet(modelName, w, h)) return d;
+            if (d.isSet(modelName, w, h))
+            {
+                resultLog(LOG_OK);
+                return d;
+            }
+        }
+        resultLog(LOG_FAIL);
+        
+        // Not match in the database. So lets see if we can calculate a new
+        // dot by offsetting from an existing offset
+        preLog(LVL_DEBUG, "Try to find reference dot set resolution for ", modelName);
+        int refW = -1;
+        int refH = -1;
+        if (modelName.equals(REF_DOT_SET_650D_CAM_NAME))
+        {
+            refW = REF_DOT_SET_650D_W;
+            refH = REF_DOT_SET_650D_H;
         }
         
-        return null;
+        if ((refW < 0) || (refH < 0))
+        {
+            // no reference found for this cam
+            resultLog(LOG_FAIL);
+            return null;
+        }
+        resultLog(LOG_OK);
+        dbg("Reference dot set for ", modelName, " is at ", refW, "x", refH);
+        
+        // find reference dot set
+        preLog(LVL_DEBUG, "Try to find reference dot set ", modelName);
+        DotSet src = null;
+        for (DotSet d : ds)
+        {
+            if (d.isSet(modelName, refW, refH))
+            {
+                src = d;
+                break;
+            }
+        }
+
+        // Even the reference could not be found.
+        // I give up
+        if (src == null)
+        {
+            resultLog(LOG_FAIL);
+            return null;
+        }
+        resultLog(LOG_OK);
+
+        // calc the offset between the requested dot set and the reference
+        int dx = (w - refW) / 2;
+        int dy = (h - refH) / 2;
+        
+        // due to the Bayer pattern, only EVEN offsets are possible
+        // the decision to DECREASE by one has been derived empirically :)
+        if ((dx % 2) != 0) dx--;
+        if ((dy % 2) != 0) dy--;
+        
+        dbg("The offset from ", refW, "x", refH, " to ", w, "x", h, " will be ", dx, ", ", dy);
+        
+        return copyDotSetWithOffset(src, w, h, dx, dy);
     }
     
     public String[] getAllModels()
