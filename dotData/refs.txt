@@ -11,11 +11,6 @@
 #
 
 #
-# Dummy example, USELESS
-#
-R :: 650M :: RefTest :: 800,600 :: 650D :: Silent_1808x727 :: 70,70
-
-#
 # Silent DNGs in movie mode, VERIFIED
 #
 R :: 650D :: SilentMovie :: 1808,1190 :: 650D :: Video_1280x720 :: 304, 246

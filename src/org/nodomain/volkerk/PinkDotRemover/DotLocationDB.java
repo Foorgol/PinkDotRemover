@@ -40,6 +40,10 @@ public class DotLocationDB extends LoggingClass {
     protected static final int REF_DOT_SET_650D_H = 720;
     protected static final String REF_DOT_SET_650D_CAM_NAME = "650D";
     
+    protected static final int REF_DOT_SET_EOSM_W = 1600;
+    protected static final int REF_DOT_SET_EOSM_H = 542;
+    protected static final String REF_DOT_SET_EOSM_CAM_NAME = "EOSM";
+    
     /**
      * All dot sets in this database
      */
@@ -412,6 +416,11 @@ public class DotLocationDB extends LoggingClass {
         {
             refW = REF_DOT_SET_650D_W;
             refH = REF_DOT_SET_650D_H;
+        }
+        else if (modelName.equals(REF_DOT_SET_EOSM_CAM_NAME))
+        {
+            refW = REF_DOT_SET_EOSM_W;
+            refH = REF_DOT_SET_EOSM_H;
         }
         
         if ((refW < 0) || (refH < 0))
