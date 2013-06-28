@@ -13,9 +13,11 @@
 package org.nodomain.volkerk.PinkDotRemover;
 
 import java.io.File;
+import java.net.URLDecoder;
 import java.nio.file.Paths;
 import javax.swing.JFileChooser;
 import java.util.*;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -360,7 +362,19 @@ public class MainFrame extends javax.swing.JFrame {
     public void doDatabaseInit()
     {
         // Determine the JAR's path
-        String jarPath = PinkDotRemover.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        String jarPath = null;
+        try
+        {
+            jarPath = (new File(PinkDotRemoverMain.class.getProtectionDomain().getCodeSource().getLocation().toURI())).toString();
+        }
+        catch (Exception e)
+        {
+            JOptionPane.showMessageDialog(this, "WTF!? URI error while trying to determine dot database path...", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        if (jarPath == null)
+        {
+            JOptionPane.showMessageDialog(this, "Could not determine the path of the dot database!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
         if (jarPath.endsWith(".jar")) jarPath = new File(jarPath).getParent();
         
         // the dir with the dot data

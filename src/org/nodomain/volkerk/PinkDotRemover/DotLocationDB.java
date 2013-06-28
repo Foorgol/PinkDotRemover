@@ -13,16 +13,12 @@
 package org.nodomain.volkerk.PinkDotRemover;
 
 import java.io.File;
-import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import org.nodomain.volkerk.LoggingLib.LoggingClass;
-import org.nodomain.volkerk.SimpleTIFFlib.ImageFileDirectory;
-import org.nodomain.volkerk.SimpleTIFFlib.TIFFhandler;
 
 /**
  * Reads, stores and maintains dot locations from various files for various

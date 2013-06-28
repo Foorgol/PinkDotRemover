@@ -15,7 +15,9 @@ package org.nodomain.volkerk.PinkDotRemover;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.*;
+import javax.swing.JOptionPane;
 import org.nodomain.volkerk.LoggingLib.LoggingClass;
+import static org.nodomain.volkerk.PinkDotRemover.MainFrame.DEFAULT_DOT_DATA_DIR;
 
 /**
  * The main class for the application. Parses the command line, instanciates
@@ -51,11 +53,28 @@ public class PinkDotRemoverMain extends LoggingClass {
         
         logPush("Trying to init dot location database");
         preLog(LVL_DEBUG, "Trying to determine JAR / execution path");
-        String jarPath = PinkDotRemover.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        // Determine the JAR's path
+        String jarPath = null;
+        try
+        {
+            jarPath = (new File(PinkDotRemoverMain.class.getProtectionDomain().getCodeSource().getLocation().toURI())).toString();
+        }
+        catch (Exception e)
+        {
+            failed("WTF!? URI error while trying to determine dot database path...");
+            return;
+        }
+        if (jarPath == null)
+        {
+            failed("Could not determine the path of the dot database!");
+        }
         if (jarPath.endsWith(".jar")) jarPath = new File(jarPath).getParent();
+        
+        // the dir with the dot data
+        String dotDataDir = Paths.get(jarPath, DEFAULT_DOT_DATA_DIR).toString();
         resultLog(LOG_OK);
         dbg("JAR path is ", jarPath);
-        DotLocationDB db = new DotLocationDB(Paths.get(jarPath, "dotData").toString());
+        DotLocationDB db = new DotLocationDB(dotDataDir);
         logPop("Done");
         db.dumpInfo();
         
