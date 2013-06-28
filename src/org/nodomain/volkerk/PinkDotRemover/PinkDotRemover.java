@@ -121,15 +121,13 @@ public class PinkDotRemover extends LoggingClass {
         int h = (int) ifdSrc.imgLen();
         
         // Let's see if we have the dot pattern for this type of image
-        DotSet ds = db.getDotSetByModelAndResolution(camType, w, h);
-        if (ds == null)
+        int[][] dotList = db.getAllDots(camType, w, h);
+        if (dotList == null)
         {
             failed("No dot pattern for image size " + w + "x" + h + " and cam type ", camType, " available!");
             return false;
         }
-        dbg("Found dot set for image: ", ds.getCombinedName());
-        
-        int[][] dotList = ds.getAllCoordinates();
+        dbg("Retrieved dot list for image!");
         
         if (doInterpolation) interpolPixel(ifdSrc, ifdDst, dotList);
         else markBadPixels(ifdSrc, ifdDst, dotList);
