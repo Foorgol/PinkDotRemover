@@ -99,11 +99,15 @@ public class DotSet {
             h = height;
         }
         
-        // calculate the image y-center; round up if necessary
+        // calculate the image x- and y-center; round up if necessary
+        int cx;
+        if ((w % 2) != 0) cx = (w + 1) / 2;
+        else cx = w / 2;
+
         int cy;
         if ((h % 2) != 0) cy = (h + 1) / 2;
         else cy = h / 2;
-        
+
         // Add a x,y-locations specified by grid parameters
         for (int[] gi : gridInfo)
         {
@@ -115,7 +119,7 @@ public class DotSet {
             
             for (int y = cy + dy0; y <= cy + dy1; y += stepY)
             {
-                for (int x = x0; x <= w; x += stepX)
+                for (int x = (cx + x0) % stepX ; x <= w; x += stepX)
                 {
                     result.add(new int[]{x, y});
                 }
