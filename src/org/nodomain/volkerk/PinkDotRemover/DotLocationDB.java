@@ -34,14 +34,21 @@ public class DotLocationDB extends LoggingClass {
     /**
      * All dot sets in this database
      */
-    ArrayList<DotSet> ds;
+    ArrayList<DotSet> dsLib;
     
+    /**
+     * Constructor. Reads non-recursively all dot set definition files (ending with .txt) from a directory
+     * and initializes the database with this data
+     * 
+     * @param dotDataPath String with the name/path of the directory to read from
+     */
     public DotLocationDB(String dotDataPath)
     {
-        ds = new ArrayList<DotSet>();
+        // initialize the list of all dot sets
+        dsLib = new ArrayList<DotSet>();
         
+        // the provided path must exist and point to a directory
         File pDotData = new File(dotDataPath);
-        
         if ((pDotData == null) || (!(pDotData.exists())) || (!(pDotData.isDirectory())))
         {
             throw new IllegalArgumentException("Not a valid directory with dot data!");
@@ -55,18 +62,27 @@ public class DotLocationDB extends LoggingClass {
         
     }
     
+    /**
+     * Takes an array of File-instances and tries to read dot definitions from them.
+     * Valid dot sets are stored in the library for later use.
+     * 
+     * @param files is an array of File-instances with are parse as dot set definitions
+     */
     protected void parseDotDataFiles(File[] files)
     {
+        // loop over all files in the provided array
         for (File f : files)
         {
+            // the file handle must be valid and point to an existing, regular file
             if ((f == null) || (!(f.exists())) || (!(f.isFile()))) continue;
             
+            // dot set definitions must end with .txt
             if (!(f.toString().endsWith(DOT_FILE_EXT))) continue;
             
             dbg("Found valid file ", f);
             
+            // try to read all text lines in the file for subsequent processing
             List<String> allLines;
-            
             try
             {
                 allLines = Files.readAllLines(Paths.get(f.toString()), Charset.defaultCharset());
@@ -77,6 +93,7 @@ public class DotLocationDB extends LoggingClass {
                 continue;
             }
             
+            // a temporary dot set for the dot set that's currently being read
             DotSet newDots = null;
             
             logPush("Start parsing file ", f);
@@ -95,11 +112,11 @@ public class DotLocationDB extends LoggingClass {
                 // is this a control line which starts a new dot set?
                 if (line.contains(DELIM))
                 {
-                    // store the current dot set
+                    // store the current dot set to the lib
                     if (newDots != null)
                     {
                         dbg("Storing dot set ", newDots.getCombinedName());
-                        ds.add(newDots);
+                        dsLib.add(newDots);
                         newDots = null;
                     }
                     
@@ -120,20 +137,24 @@ public class DotLocationDB extends LoggingClass {
                     continue;
                 }
                 
-                // if its not a control line, it must be a coordinate line
+                // if its not a control line, it must be a coordinates line
                 // which we can only handle if we have a dot set
                 if (newDots == null) continue;
                 
-                // Split up CSV data
+                // Split up CSV data and make sure the number of "columns" fits
                 String[] val = line.split(",");
                 if (val.length != 5) continue;
                 
+                // prepare csv-values for parsing as integers
                 String x0 = val[0].trim();
                 String dy0 = val[1].trim();
                 String dy1 = val[2].trim();
                 String stepX = val[3].trim();
                 String stepY = val[4].trim();
                 
+                // append the dot definition to the current dot set
+                // parsing the Strings as ints might throw exceptions which
+                // we gracefully ignore....
                 newDots.addCoordinates(Integer.parseInt(x0), Integer.parseInt(dy0),
                         Integer.parseInt(dy1),
                         Integer.parseInt(stepX), Integer.parseInt(stepY));
@@ -146,13 +167,21 @@ public class DotLocationDB extends LoggingClass {
             if (newDots != null)
             {
                 dbg("Storing dot set ", newDots.getCombinedName());
-                ds.add(newDots);
+                dsLib.add(newDots);
             }
                     
         }
         
     }
 
+    /**
+     * Takes a control line from a dot set definition file, parses the line and
+     * creates/initializes a new dot set from the parameters
+     * 
+     * @param controlLine is the controle line from the dot set definition file
+     * 
+     * @return the newline created dot set instance or null in case of errors
+     */
     protected DotSet initDotSetFromText(String controlLine)
     {
         // No further error checking here.
@@ -177,7 +206,7 @@ public class DotLocationDB extends LoggingClass {
             return null;
         }
         
-        // get the resolution
+        // get the resolution and check if its valid
         String csvRes = val[2].trim();
         int[] res;
         try
@@ -195,13 +224,22 @@ public class DotLocationDB extends LoggingClass {
             return null;
         }
         
-        // build the resolution string (e.g., "1280x720") and
-        // initialize a new dot set
+        // initialize a new dot set with the parameters
         DotSet newDotSet = new DotSet(cam, res[0], res[1]);
         
         return newDotSet;
     }
     
+    /**
+     * Converts a string with comma separated integers and converts it into an int array
+     * 
+     * NOTE: "empty" values are not permitted and will throw an exception!
+     * Example: 1,2,,4 is invalid!
+     * 
+     * @param csv the string with the integers
+     * 
+     * @return an int array
+     */
     protected int[] intArrayFromCSV(String csv)
     {
         // there are a lot of things that can go wrong here
@@ -218,28 +256,36 @@ public class DotLocationDB extends LoggingClass {
         return result;
     }
     
+    /**
+     * Retrieves a list of all distinct camera models in the database
+     * 
+     * @return a String array with the model names
+     */
     public String[] getAllModels()
     {
         ArrayList<String> allCams = new ArrayList<String>();
         
-        for (DotSet d : ds)
+        for (DotSet ds : dsLib)
         {
-            String mod = d.getCamType();
+            String mod = ds.getCamType();
             if (!(allCams.contains(mod))) allCams.add(mod);
         }
         
-        String[] dummy = new String[1];
+        String[] dummy = new String[1];  // only necessary to convert the ArrayList to String[]
         
         return allCams.toArray(dummy);
     }
     
+    /**
+     * Dumps a list of all stored resolutions and camera models to stderr
+     */
     public void dumpInfo()
     {
         String nl = System.lineSeparator();
         
         String out = "------------ Dot Lib Info ------------" + nl + nl;
         
-        for (DotSet d : ds)
+        for (DotSet d : dsLib)
         {
             out += "  " + d.getCombinedName() + nl;
         }
@@ -251,33 +297,46 @@ public class DotLocationDB extends LoggingClass {
         System.err.println(out);
     }
     
+    /**
+     * Returns a list of all pink dot coordinates for a given camera and image resolution.
+     * 
+     * If a dot set is explicitly defined for the requested resolution, the specific dot set
+     * is used for calculate all dots. Otherwise, the dot locations are interpolated from the
+     * default dot set for the cam.
+     * 
+     * @param model is the camera model for which the dot locations shall be retrieved
+     * @param w is the width of the RAW image in pixels (outer dimensions; ignore ActiveArea etc.)
+     * @param h is the height of the RAW image in pixels (outer dimensions; ignore ActiveArea etc.)
+     * 
+     * @return an array of all [x,y] dot locations or null in case of errors
+     */
     public int[][] getAllDots(String model, int w, int h)
     {
         // try to get a specific dot set for this resolution
         preLog(LVL_DEBUG, "Trying to find specific dot set for ", model, " and ", w, "x", h);
-        DotSet d = null;
-        for (DotSet tmp : ds)
+        DotSet ds = null;
+        for (DotSet tmp : dsLib)
         {
             if (tmp.isSet(model, w, h))
             {
-                d = tmp;
+                ds = tmp;
                 resultLog(LOG_OK);
             }
         }
         
         // no match. Try to get a generic dot set for this model
-        if (d == null)
+        if (ds == null)
         {
             resultLog(LOG_FAIL);
             preLog(LVL_DEBUG, "Trying to find generic dot set for ", model);
-            for (DotSet tmp : ds)
+            for (DotSet tmp : dsLib)
             {
-                if (tmp.isSet(model, 0, 0)) d = tmp;
+                if (tmp.isSet(model, 0, 0)) ds = tmp;
             }
             
             // still no match. So we don't have any
             // usable dot data for this cam
-            if (d == null)
+            if (ds == null)
             {
                 resultLog(LOG_FAIL);
                 failed("Unable to find dot set for ", model, " and ", w, "x", h);
@@ -287,6 +346,6 @@ public class DotLocationDB extends LoggingClass {
             resultLog(LOG_OK);
         }
         
-        return d.getAllCoordinates(w, h);
+        return ds.getAllCoordinates(w, h);
     }
 }
