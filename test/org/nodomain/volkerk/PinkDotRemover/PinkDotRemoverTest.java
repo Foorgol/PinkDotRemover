@@ -4,9 +4,12 @@
  */
 package org.nodomain.volkerk.PinkDotRemover;
 
+import java.io.IOException;
 import java.nio.file.Paths;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.nodomain.volkerk.SimpleTIFFlib.ImageFileDirectory;
+import org.nodomain.volkerk.SimpleTIFFlib.TIFFhandler;
 
 /**
  *
@@ -15,7 +18,7 @@ import static org.junit.Assert.*;
 public class PinkDotRemoverTest extends TstBaseClass {
     
     @Test
-    public void testConversion()
+    public void testConversion() throws IOException
     {
         String[] fList = new String[] {
             "1280x720_14bit_le_650D.dng",
@@ -33,6 +36,7 @@ public class PinkDotRemoverTest extends TstBaseClass {
         DotLocationDB db = new DotLocationDB(Paths.get(projRootDir(), "dotData").toString());
         assertNotNull(db);
         
+        suppressCleanup();
         for (String fname : fList)
         {
             String inFile = Paths.get(testInputDataDir(), fname).toString();
@@ -45,5 +49,6 @@ public class PinkDotRemoverTest extends TstBaseClass {
             pdr.writeResultToFile(outFile);
             assertTrue(cmpFilesBinary(outFile, refFile));
         }
+        cleanupOutDir();
     }
 }

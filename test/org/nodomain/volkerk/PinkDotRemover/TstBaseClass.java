@@ -211,6 +211,9 @@ public class TstBaseClass {
         byte[] digest1 = calcFileMD5(fname1);
         byte[] digest2 = calcFileMD5(fname2);
         
+        assertNotNull(digest1);
+        assertNotNull(digest2);
+        
         return Arrays.equals(digest1, digest2);
     }
 }
