@@ -243,7 +243,7 @@ public class PinkDotRemover extends LoggingClass {
         else resultLog(LOG_OK);
                 
         logPush("Calling dstDng.saveAs() with Path parameter ", dstPath);
-        dstDng.saveAs(dstPath);
+        writeResultToFile(dstPath);
         logPop("Done");
         
         dbg("File saved successfully");
@@ -251,4 +251,26 @@ public class PinkDotRemover extends LoggingClass {
         return dstPath.toString();
     }
     
+    
+    /**
+     * Writes the contents of the destination image to a DNG file.
+     * Existing files will be overwritten.
+     * 
+     * @param dstFileName the name of the file to write to
+     */
+    public void writeResultToFile(String dstFileName)
+    {
+        dstDng.saveAs(dstFileName);
+    }
+    
+    /**
+     * Writes the contents of the destination image to a DNG file.
+     * Existing files will be overwritten.
+     * 
+     * @param dstFilePath the path of the file to write to
+     */
+    public void writeResultToFile(Path dstFilePath)
+    {
+        dstDng.saveAs(dstFilePath);
+    }
 }
