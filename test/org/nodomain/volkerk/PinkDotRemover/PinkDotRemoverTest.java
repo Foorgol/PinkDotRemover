@@ -29,7 +29,9 @@ public class PinkDotRemoverTest extends TstBaseClass {
             "1600x680_14bit_le_650D.dng",
             "1600x900_14bit_le_650D.dng",
             "1728x736_14bit_le_650D.dng",
-            "1728x972_14bit_le_650D.dng"
+            "1728x972_14bit_le_650D.dng",
+            "1808x1190_14bit_le_650D.dng",
+            "1808x727_14bit_le_650D.dng"
         };
         
         System.err.println(Paths.get(projRootDir(), "dotData").toString());
