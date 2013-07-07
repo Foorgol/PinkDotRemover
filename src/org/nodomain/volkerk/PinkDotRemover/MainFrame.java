@@ -252,6 +252,7 @@ public class MainFrame extends javax.swing.JFrame {
         for (File f : fChooser.getSelectedFiles())
         {
             if (fList.contains(f)) continue;
+            if (!(isValidInputFile(f))) continue;
             fList.add(f);
         }
         
@@ -273,11 +274,28 @@ public class MainFrame extends javax.swing.JFrame {
         {
             if (fList.contains(f)) continue;
             if (!(f.isFile())) continue;
+            if (!(isValidInputFile(f))) continue;
             fList.add(f);
         }
         
         updateList();
         updateButtons();
+    }
+    
+    protected boolean isValidInputFile(File f)
+    {
+        String[] validExtensions = new String[] {
+            "dng"
+            //"raw"  // future
+        };
+        
+        String fName = f.toString().toLowerCase();
+        for (String ext : validExtensions)
+        {
+            if (fName.endsWith(ext)) return true;
+        }
+        
+        return false;
     }
     
     protected void doConversion()
