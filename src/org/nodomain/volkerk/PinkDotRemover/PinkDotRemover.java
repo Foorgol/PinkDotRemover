@@ -210,8 +210,13 @@ public class PinkDotRemover extends LoggingClass {
      */
     protected void markBadPixels(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, int[][] dotList)
     {
+        int w = (int) ifdSrc.imgWidth();
+        int h = (int) ifdSrc.imgLen();
+        
         for (int[] dot : dotList)
         {
+            //just set pixels to 0 that are in the image
+            if ((dot[0] < 0) || (dot[0] >= w) || (dot[1] < 0) || (dot[1] >= h)) continue;
             ifdDst.CFA_setPixel(dot[0], dot[1], 0);
         }
     
