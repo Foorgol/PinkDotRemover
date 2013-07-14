@@ -100,13 +100,15 @@ public class DotSet {
             h = height;
         }
         
-        // calculate the image x- and y-center; round up if necessary
+        // calculate the image x- and y-center;
+        // we do need an even offset. since the offset is calculated by dividing by 2, the width and height has to be divisible by 4
+        // round up to next value divisible by 4 without remainder if necessary
         int cx;
-        if ((w % 2) != 0) cx = (w + 1) / 2;
+        if ((w % 4) != 0) cx = (w + (4-w%4)) / 2;
         else cx = w / 2;
 
         int cy;
-        if ((h % 2) != 0) cy = (h + 1) / 2;
+        if ((h % 4) != 0) cy = (h + (4-h%4)) / 2;
         else cy = h / 2;
 
         // Add all x,y-locations specified by grid parameters
