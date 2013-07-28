@@ -197,8 +197,7 @@ public class PinkDotRemover extends LoggingClass {
         if (srcRaw != null)
         {
             logPush("Starting dot removal in RAW file");
-            for (int n=0; n < 1; n++)
-            //for (int n=0; n < srcRaw.getFrameCount(); n++)
+            for (int n=0; n < srcRaw.getFrameCount(); n++)
             {
                 // get the n-th frame and remove the dots
                 logPush("Retrieving frame ", n, " of ", srcRaw.getFrameCount() - 1, " from RAW file");
