@@ -94,7 +94,7 @@ public class PinkDotRemoverMain extends LoggingClass {
                 logPop("Done");
 
                 logPush("Starting dot removal for ", f);
-                if (!(pdr.doRemovalInMemory(true)))
+                if (!(pdr.doRemoval(true)))
                 {
                     failed("Pink dot removal failed, no data written, program stopped");
                     logPop("Aborted");
@@ -102,9 +102,6 @@ public class PinkDotRemoverMain extends LoggingClass {
                 }
                 logPop("Done");
 
-                logPush("Start writing results");
-                dstPath = pdr.writeResultToFile();
-                logPop("Done");
             }
             catch (Exception e)
             {
@@ -166,13 +163,13 @@ public class PinkDotRemoverMain extends LoggingClass {
         logPop("Done");
         dbg(fileList.size(), " files found");
         
-        // clean-up: allow only files ending in "dng" or "DNG"
+        // clean-up: allow only files ending in "dng" or "DNG" or "raw" or "RAW"
         ArrayList<File> result = new ArrayList();
         logPush("Checking if found files are valid");
         for (File f : fileList)
         {
             String fname = f.getName();
-            if (fname.endsWith("dng") || (fname.endsWith("DNG")))
+            if (fname.toLowerCase().endsWith("dng") || (fname.toLowerCase().endsWith("raw")))
             {
                 dbg(f, " is okay");
                 result.add(f);

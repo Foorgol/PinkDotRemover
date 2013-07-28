@@ -47,7 +47,7 @@ public class PinkDotRemoverTest extends TstBaseClass {
             
             System.err.println("Converting " + inFile);
             PinkDotRemover pdr = new PinkDotRemover(inFile, db, "650D");
-            assertTrue(pdr.doRemovalInMemory(true));
+            assertTrue(pdr.doRemoval(true));
             pdr.writeResultToFile(outFile);
             assertTrue(cmpFilesBinary(outFile, refFile));
         }

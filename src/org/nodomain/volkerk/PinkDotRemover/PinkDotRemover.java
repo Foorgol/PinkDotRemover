@@ -16,7 +16,10 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.nodomain.volkerk.LoggingLib.LoggingClass;
+import org.nodomain.volkerk.SimpleTIFFlib.Generic_CFA_PixBuf;
 import org.nodomain.volkerk.SimpleTIFFlib.ImageFileDirectory;
+import org.nodomain.volkerk.SimpleTIFFlib.RawFileFrame;
+import org.nodomain.volkerk.SimpleTIFFlib.RawImageSequenceHandler;
 import org.nodomain.volkerk.SimpleTIFFlib.TIFFhandler;
 
 /**
@@ -49,12 +52,17 @@ public class PinkDotRemover extends LoggingClass {
      */
     protected TIFFhandler dstDng;
     
+    /**
+     * A handler for a RAW file with image sequences
+     */
+    protected RawImageSequenceHandler srcRaw;
+    
     protected static final String DEFAULT_CAM_TYPE = "650D";
     
     /**
      * Constructor. Checks for a valid file name and tries to open the file
      * 
-     * @param fName the name / path of the DNG file
+     * @param fName the name / path of the DNG or RAW file
      * @param db is the database with dot locations for all cams and resolutions
      * @param camType is the name of the camera type
      */
@@ -70,16 +78,47 @@ public class PinkDotRemover extends LoggingClass {
         }
         resultLog(LOG_OK);
         
-        logPush("Instanciating TIFF handlers for ", fName);
+        srcFileName = fName;
+        
+        db = _db;
+        
+        camType = DEFAULT_CAM_TYPE;
+        if ((_camType != null) && (_camType.length() != 0)) camType = _camType;
+
+        // instanciate the right file handler, depending on the file name
+        if (srcFileName.toLowerCase().endsWith("dng"))
+        {
+            logPush("Instanciating TIFF handlers for ", fName);
+            initFromDNG();
+            logPop("Done");
+        }
+        else if (srcFileName.toLowerCase().endsWith("raw"))
+        {
+            logPush("Instanciating RAW handler for ", fName);
+            initFromRAW();
+            logPop("Done");            
+        }
+        else
+        {
+            resultLog(LOG_FAIL + ": not a valid RAW or DNG file");
+            throw new IllegalArgumentException("File " + fName + " seems not to be a valid RAW or DNG file!");
+        }
+        
+    }
+    
+    protected void initFromDNG()
+    {
+        srcRaw = null;
+        
         try
         {
             
             logPush("Instanciating source TIFF handler with string arg");
-            srcDng = new TIFFhandler(fName);
+            srcDng = new TIFFhandler(srcFileName);
             logPop("Done");
             
             logPush("Instanciating destination TIFF handler with string arg");
-            dstDng = new TIFFhandler(fName);
+            dstDng = new TIFFhandler(srcFileName);
             logPop("Done");
         }
         catch (Exception e)
@@ -87,14 +126,18 @@ public class PinkDotRemover extends LoggingClass {
             failed(e.getMessage());
             throw new IllegalArgumentException("Baaaaad file: " + e.getMessage());
         }
+        
+    }
+    
+    protected void initFromRAW()
+    {
+        srcDng = null;
+        dstDng = null;
+        
+        logPush("Instanciating RAW file handler with string arg");
+        srcRaw = new RawImageSequenceHandler(srcFileName);
+        srcRaw.dumpInfo();
         logPop("Done");
-        
-        srcFileName = fName;
-        
-        db = _db;
-        
-        camType = DEFAULT_CAM_TYPE;
-        if ((_camType != null) && (_camType.length() != 0)) camType = _camType;
     }
     
     /**
@@ -103,22 +146,44 @@ public class PinkDotRemover extends LoggingClass {
      * @param doInterpolation if true, the interpolation algorithm is used; otherwise, the pixel is simply marked as "bad pixel"
      * @return true if the dots could be removed, false in case of errors
      */
-    public boolean doRemovalInMemory(boolean doInterpolation)
+    public boolean doRemoval(boolean doInterpolation)
     {
+        int w;
+        int h;
+        
         // prepare access to the image data
-        // we assume that the TIFF file contains exactly one RAW image...
-        logPush("Retrieving CFA IFDs");
+        ImageFileDirectory ifdSrc = null;
+        ImageFileDirectory ifdDst = null;
         
-        ImageFileDirectory ifdSrc = srcDng.getFirstIFDwithCFA();
-        if (ifdSrc == null) dbg("Got null for srcDng");
-        
-        ImageFileDirectory ifdDst = dstDng.getFirstIFDwithCFA();
-        if (ifdDst == null) dbg("Got null for srcDng");
-        
-        logPop("Done");
-        
-        int w = (int) ifdSrc.imgWidth();
-        int h = (int) ifdSrc.imgLen();
+        if (srcRaw != null)
+        {
+            // okay, we're reading from a RAW file
+            
+            logPush("Retrieving CFA image dimensions from RAW file");
+            w = srcRaw.getWidth();
+            h = srcRaw.getHeight();
+            logPop("Done");
+        }
+        else
+        {
+            // we're reading from a DNG file
+            
+            // we assume that the TIFF file contains exactly one RAW image...
+            logPush("Retrieving CFA IFDs and image dimensions from DNG file");
+
+            ifdSrc = srcDng.getFirstIFDwithCFA();
+            if (ifdSrc == null) dbg("Got null for srcDng");
+
+            ifdDst = dstDng.getFirstIFDwithCFA();
+            if (ifdDst == null) dbg("Got null for dstDng");
+
+            w = (int) ifdSrc.imgWidth();
+            h = (int) ifdSrc.imgHeight();
+            
+            ifdSrc.dumpInfo();
+
+            logPop("Done");
+        }
         
         // Let's see if we have the dot pattern for this type of image
         int[][] dotList = db.getAllDots(camType, w, h);
@@ -129,8 +194,42 @@ public class PinkDotRemover extends LoggingClass {
         }
         dbg("Retrieved dot list for image!");
         
-        if (doInterpolation) interpolPixel(ifdSrc, ifdDst, dotList);
-        else markBadPixels(ifdSrc, ifdDst, dotList);
+        if (srcRaw != null)
+        {
+            logPush("Starting dot removal in RAW file");
+            for (int n=0; n < 1; n++)
+            //for (int n=0; n < srcRaw.getFrameCount(); n++)
+            {
+                // get the n-th frame and remove the dots
+                logPush("Retrieving frame ", n, " of ", srcRaw.getFrameCount() - 1, " from RAW file");
+                RawFileFrame srcFr = srcRaw.getFrame(n);
+                RawFileFrame dstFr = srcFr.getCopy();
+                srcFr.dumpInfo();
+                logPop("Done");
+                logPush("Removing dots in frame");
+                if (doInterpolation) interpolPixel(srcFr, dstFr, dotList);
+                else markBadPixels(srcFr, dstFr, dotList);
+                logPop("Done");
+                                
+                // write the n-th frame back to disk
+                logPush("Writing frame ", n, " back to disk");
+                srcRaw.writeFrameToFile(dstFr, n);
+                logPop("Done");
+            }
+            logPop("Done");
+        }
+        else
+        {
+            logPush("Starting dot removal in DNG file");
+            if (doInterpolation) interpolPixel(ifdSrc, ifdDst, dotList);
+            else markBadPixels(ifdSrc, ifdDst, dotList);
+            logPop("Done");
+            
+            // write the frame back to disk
+            logPush("Writing image back to disk");
+            writeResultsToTargetDNG();
+            logPop("Done");
+        }
         
         dbg("Conversion in memory completed!");
         
@@ -142,14 +241,14 @@ public class PinkDotRemover extends LoggingClass {
      * Replaces a pixel intensity with an interpolation of the "X"-like neighboring pixels
      * Pixels closer than 2 pixel to the image border can't be interpolated and remain unmodified.
      * 
-     * @param ifdSrc ImageFileHandler for the distorted source image data (read)
-     * @param ifdDst ImageFileHandler for the improved image data (write)
+     * @param srcBuf ImageFileHandler for the distorted source image data (read)
+     * @param dstBuf ImageFileHandler for the improved image data (write)
      * @param dotList a list of x,y-coordinates of the dots to fix
      */
-    protected void interpolPixel(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, int[][] dotList)
+    protected void interpolPixel(Generic_CFA_PixBuf srcBuf, Generic_CFA_PixBuf dstBuf, int[][] dotList)
     {
-        int w = (int) ifdSrc.imgWidth();
-        int h = (int) ifdSrc.imgLen();
+        int w = (int) srcBuf.imgWidth();
+        int h = (int) srcBuf.imgHeight();
         
         for (int[] dot : dotList)
         {
@@ -160,10 +259,10 @@ public class PinkDotRemover extends LoggingClass {
             if ((x < 2) || (x > (w - 3)) || (y < 2) || (y > (h - 4))) continue;
             
             // determine intensity gradients in all four directions
-            int g1 = ifdSrc.CFA_getPixel(x, y - 2) - ifdSrc.CFA_getPixel(x, y + 2); // top-down
-            int g2 = ifdSrc.CFA_getPixel(x - 2, y) - ifdSrc.CFA_getPixel(x + 2, y); // left-right
-            int g3 = ifdSrc.CFA_getPixel(x - 2, y - 2) - ifdSrc.CFA_getPixel(x + 2, y + 2); // top-left, down-right
-            int g4 = ifdSrc.CFA_getPixel(x + 2, y - 2) - ifdSrc.CFA_getPixel(x - 2, y + 2); // top-right, down-left
+            int g1 = srcBuf.CFA_getPixel(x, y - 2) - srcBuf.CFA_getPixel(x, y + 2); // top-down
+            int g2 = srcBuf.CFA_getPixel(x - 2, y) - srcBuf.CFA_getPixel(x + 2, y); // left-right
+            int g3 = srcBuf.CFA_getPixel(x - 2, y - 2) - srcBuf.CFA_getPixel(x + 2, y + 2); // top-left, down-right
+            int g4 = srcBuf.CFA_getPixel(x + 2, y - 2) - srcBuf.CFA_getPixel(x - 2, y + 2); // top-right, down-left
             
             // find the minimum gradient
             g1 = Math.abs(g1);
@@ -179,23 +278,23 @@ public class PinkDotRemover extends LoggingClass {
             double newVal;
             if (minG == g1)
             {
-                newVal = (ifdSrc.CFA_getPixel(x, y - 2) + ifdSrc.CFA_getPixel(x, y + 2)) * 0.5;
+                newVal = (srcBuf.CFA_getPixel(x, y - 2) + srcBuf.CFA_getPixel(x, y + 2)) * 0.5;
             }
             else if (minG == g2)
             {
-                newVal = (ifdSrc.CFA_getPixel(x-2, y) + ifdSrc.CFA_getPixel(x+2, y)) * 0.5;
+                newVal = (srcBuf.CFA_getPixel(x-2, y) + srcBuf.CFA_getPixel(x+2, y)) * 0.5;
             }
             else if (minG == g3)
             {
-                newVal = (ifdSrc.CFA_getPixel(x-2, y-2) + ifdSrc.CFA_getPixel(x+2, y+2)) * 0.5;
+                newVal = (srcBuf.CFA_getPixel(x-2, y-2) + srcBuf.CFA_getPixel(x+2, y+2)) * 0.5;
             }
             else
             {
-                newVal = (ifdSrc.CFA_getPixel(x+2, y-2) + ifdSrc.CFA_getPixel(x-2, y+2)) * 0.5;
+                newVal = (srcBuf.CFA_getPixel(x+2, y-2) + srcBuf.CFA_getPixel(x-2, y+2)) * 0.5;
             }
 
 
-            ifdDst.CFA_setPixel(x, y, (int) newVal);
+            dstBuf.CFA_setPixel(x, y, (int) newVal);
         }
         
     }
@@ -204,20 +303,20 @@ public class PinkDotRemover extends LoggingClass {
      * Replaces a pixel intensity with a 0 to indicate a bad pixel
      * Leaves the actual interpolation to the RAW processor later on
      * 
-     * @param ifdSrc ImageFileHandler for the distorted source image data (read)
-     * @param ifdDst ImageFileHandler for the improved image data (write)
+     * @param srcBuf ImageFileHandler for the distorted source image data (read)
+     * @param dstBuf ImageFileHandler for the improved image data (write)
      * @param dotList a list of x,y-coordinates of the dots to fix
      */
-    protected void markBadPixels(ImageFileDirectory ifdSrc, ImageFileDirectory ifdDst, int[][] dotList)
+    protected void markBadPixels(Generic_CFA_PixBuf srcBuf, Generic_CFA_PixBuf dstBuf, int[][] dotList)
     {
-        int w = (int) ifdSrc.imgWidth();
-        int h = (int) ifdSrc.imgLen();
+        int w = (int) srcBuf.imgWidth();
+        int h = (int) srcBuf.imgHeight();
         
         for (int[] dot : dotList)
         {
             //just set pixels to 0 that are in the image
             if ((dot[0] < 0) || (dot[0] >= w) || (dot[1] < 0) || (dot[1] >= h)) continue;
-            ifdDst.CFA_setPixel(dot[0], dot[1], 0);
+            dstBuf.CFA_setPixel(dot[0], dot[1], 0);
         }
     
     }
@@ -229,7 +328,7 @@ public class PinkDotRemover extends LoggingClass {
      * 
      * @return the name and (possibly) path of the destination file
      */
-    public String writeResultToFile()
+    protected String writeResultsToTargetDNG()
     {
         preLog(LVL_DEBUG, "Trying to instanciate Path for ", srcFileName);
         Path srcPath = Paths.get(srcFileName);
@@ -263,7 +362,7 @@ public class PinkDotRemover extends LoggingClass {
      * 
      * @param dstFileName the name of the file to write to
      */
-    public void writeResultToFile(String dstFileName)
+    protected void writeResultToFile(String dstFileName)
     {
         dstDng.saveAs(dstFileName);
     }
@@ -274,7 +373,7 @@ public class PinkDotRemover extends LoggingClass {
      * 
      * @param dstFilePath the path of the file to write to
      */
-    public void writeResultToFile(Path dstFilePath)
+    protected void writeResultToFile(Path dstFilePath)
     {
         dstDng.saveAs(dstFilePath);
     }

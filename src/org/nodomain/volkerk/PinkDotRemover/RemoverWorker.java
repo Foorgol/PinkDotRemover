@@ -45,13 +45,12 @@ public class RemoverWorker extends SwingWorker<ArrayList<File>, Integer>
             try
             {
                 pdr = new PinkDotRemover(f.toString(), db, camType);
-                if (!(pdr.doRemovalInMemory(doInterpolation)))
+                if (!(pdr.doRemoval(doInterpolation)))
                 {
                     i++;
                 }
                 else
                 {
-                    pdr.writeResultToFile();
                     fList.remove(i);
                 }
             }
