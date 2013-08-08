@@ -348,8 +348,8 @@ public class MainFrame extends javax.swing.JFrame {
     protected boolean isValidInputFile(File f)
     {
         String[] validExtensions = new String[] {
-            "dng"
-            //"raw"  // future
+            "dng",
+            "raw"
         };
         
         String fName = f.toString().toLowerCase();
@@ -363,6 +363,21 @@ public class MainFrame extends javax.swing.JFrame {
     
     protected void doConversion()
     {
+        // spit out a warning if we have RAW files in the list
+        if (isRAWinFileList())
+        {
+            String s = "WARNING:" + System.lineSeparator();
+            s += "You have at least one RAW file in the list." + System.lineSeparator();
+            s +=  System.lineSeparator();
+            s += "      !! RAW FILES WILL BE OVERWRITTEN IN PLACE !!" + System.lineSeparator();
+            s +=  System.lineSeparator();
+            s += "Make sure you have a backup of your files." + System.lineSeparator();
+            s +=  System.lineSeparator();
+            s += "Proceed?";
+            int result = JOptionPane.showConfirmDialog(this, s, "Overwriting RAW files", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (result != JOptionPane.OK_OPTION) return;
+        }
+        
         // prepare the progress bar
         progBar.setMaximum(fList.size());
         
@@ -373,6 +388,16 @@ public class MainFrame extends javax.swing.JFrame {
         // prepare and start the conversion
         remWorker = new RemoverWorker(this, db, cam, fList, radioInterpolate.isSelected());
         remWorker.execute();
+    }
+    
+    protected boolean isRAWinFileList()
+    {
+        for (File f : fList)
+        {
+            if (f.toString().toLowerCase().endsWith("raw")) return true;
+        }
+        
+        return false;
     }
     
     protected void updateList()
