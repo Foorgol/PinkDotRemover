@@ -32,6 +32,11 @@ public class DotSet {
      * The RAW image height associated with this dot set
      */
     int height;
+
+     /**
+     * Should the offset be rounded up or rounded down if height and width aren't divisible by 4
+     */
+    boolean roundDown = false;
     
     /**
      * A list for all the "grid-like" dot information
@@ -45,7 +50,7 @@ public class DotSet {
      */
     public DotSet(String _camType)
     {
-        this(_camType, 0, 0);
+        this(_camType, 0, 0, false);
     }
     
     /**
@@ -55,12 +60,13 @@ public class DotSet {
      * @param _w is the RAW width (ignore ActiveArea) of the image for this dot set (zero for default dot set)
      * @param _h is the RAW height (ignore ActiveArea) of the image for this dot set (zero for default dot set)
      */
-    public DotSet(String _camType, int _w, int _h)
+    public DotSet(String _camType, int _w, int _h, boolean _roundDown)
     {
         // FIX: some range checking could be useful here...
         camType = _camType;
         height = _h;
         width = _w;
+        roundDown = _roundDown;
         
         gridInfo = new ArrayList<int[]>();
     }
@@ -102,13 +108,13 @@ public class DotSet {
         
         // calculate the image x- and y-center;
         // we do need an even offset. since the offset is calculated by dividing by 2, the width and height has to be divisible by 4
-        // round up to next value divisible by 4 without remainder if necessary
+        // round up or down to next value divisible by 4 without remainder if necessary
         int cx;
-        if ((w % 4) != 0) cx = (w - (4-w%4)) / 2;
+        if ((w % 4) != 0) cx = (w + (roundDown ? 1 : -1)*(4-w%4)) / 2;
         else cx = w / 2;
 
         int cy;
-        if ((h % 4) != 0) cy = (h - (4-h%4)) / 2;
+        if ((h % 4) != 0) cy = (h + (roundDown ? 1 : -1)*(4-h%4)) / 2;
         else cy = h / 2;
 
         // Add all x,y-locations specified by grid parameters

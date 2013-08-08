@@ -192,7 +192,7 @@ public class DotLocationDB extends LoggingClass {
         String[] val = controlLine.split(DELIM);
         
         // need three values: token (new / ref), cam name, resolution
-        if (val.length != 3)
+        if (val.length < 3)
         {
             failed("Control line '", controlLine, "' is invalid");
             return null;
@@ -224,8 +224,13 @@ public class DotLocationDB extends LoggingClass {
             return null;
         }
         
+        boolean roundDown = false;
+        if (val.length > 3) {
+            roundDown = val[3].trim().equals("round_down");
+        }
+        
         // initialize a new dot set with the parameters
-        DotSet newDotSet = new DotSet(cam, res[0], res[1]);
+        DotSet newDotSet = new DotSet(cam, res[0], res[1], roundDown);
         
         return newDotSet;
     }

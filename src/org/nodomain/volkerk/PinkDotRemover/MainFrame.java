@@ -23,6 +23,7 @@ import java.net.URLDecoder;
 import java.nio.file.Paths;
 import javax.swing.JFileChooser;
 import java.util.*;
+import java.util.prefs.Preferences;
 import javax.swing.DefaultListModel;
 import javax.swing.JOptionPane;
 
@@ -38,9 +39,12 @@ public class MainFrame extends javax.swing.JFrame {
     protected LocationDatabaseInitWorker initWorker;
     
     protected DotLocationDB db;
+    protected Preferences prefs;
     
     protected static final String DEFAULT_DOT_DATA_DIR = "dotData";
     protected static final String DEFAULT_CAM_TYPE = "650D";
+    protected static final String PREF_CAM_TYPE = "cam_type";
+    protected static final String PREF_NODE_NAME = "org.nodomain.volkerk.PinkDotRemover";
     
     /**
      * Creates new form MainFrame
@@ -51,6 +55,8 @@ public class MainFrame extends javax.swing.JFrame {
         remWorker = null;
         initWorker = null;
         db = null;
+        
+        prefs = Preferences.userRoot().node(PREF_NODE_NAME);
         
         FileList.setDropTarget(new DropTarget() {
             public synchronized void drop(DropTargetDropEvent evt) {
@@ -232,6 +238,11 @@ public class MainFrame extends javax.swing.JFrame {
         getContentPane().add(jScrollPane2, gridBagConstraints);
 
         cbCam.setEnabled(false);
+        cbCam.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                cbCamItemStateChanged(evt);
+            }
+        });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 4;
         gridBagConstraints.gridy = 4;
@@ -276,6 +287,15 @@ public class MainFrame extends javax.swing.JFrame {
             }
         }
     }//GEN-LAST:event_FileListKeyPressed
+
+    private void cbCamItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbCamItemStateChanged
+        if(cbCam.isEnabled()) {
+            String val = (String) cbCam.getSelectedItem();
+            if(val != null) {
+                prefs.put(PREF_CAM_TYPE, val);
+            } 
+        }        
+    }//GEN-LAST:event_cbCamItemStateChanged
 
     protected void doClearList()
     {
@@ -478,11 +498,10 @@ public class MainFrame extends javax.swing.JFrame {
         {
             cbCam.addItem(cam);
         }
-        cbCam.setEnabled(true);
+        cbCam.setEnabled(true); 
         
-        // select the default, if possible. Or just the first item
-        cbCam.setSelectedIndex(0);
-        cbCam.setSelectedItem(DEFAULT_CAM_TYPE);
+        // select the default, if possible. else keep the first item which was set by setEnabled.
+        cbCam.setSelectedItem(prefs.get(PREF_CAM_TYPE, DEFAULT_CAM_TYPE));                 
     }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
