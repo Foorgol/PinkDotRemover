@@ -12,11 +12,18 @@
 
 package org.nodomain.volkerk.PinkDotRemover;
 
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDropEvent;
 import java.io.File;
+import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.file.Paths;
 import javax.swing.JFileChooser;
 import java.util.*;
+import javax.swing.DefaultListModel;
 import javax.swing.JOptionPane;
 
 /**
@@ -45,6 +52,27 @@ public class MainFrame extends javax.swing.JFrame {
         initWorker = null;
         db = null;
         
+        FileList.setDropTarget(new DropTarget() {
+            public synchronized void drop(DropTargetDropEvent evt) {
+                try {
+                    evt.acceptDrop(DnDConstants.ACTION_COPY);
+                    List<File> droppedFiles = (List<File>) evt
+                            .getTransferable().getTransferData(
+                                    DataFlavor.javaFileListFlavor);
+                    
+                    for (File file : droppedFiles) {
+                        if (fList.contains(file)) continue;
+                        if (!(isValidInputFile(file))) continue;
+                        fList.add(file);
+                    }
+                    updateList();
+                    updateButtons();
+                } catch (UnsupportedFlavorException ex) {
+                } catch (IOException ex) {
+                }
+            }
+        });
+        
         updateList();
         updateButtons();
         
@@ -72,8 +100,8 @@ public class MainFrame extends javax.swing.JFrame {
         filler2 = new javax.swing.Box.Filler(new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 0), new java.awt.Dimension(0, 32767));
         radioBadPix = new javax.swing.JRadioButton();
         radioInterpolate = new javax.swing.JRadioButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        teFiles = new javax.swing.JTextArea();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        FileList = new javax.swing.JList();
         cbCam = new javax.swing.JComboBox();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -186,11 +214,12 @@ public class MainFrame extends javax.swing.JFrame {
         gridBagConstraints.anchor = java.awt.GridBagConstraints.WEST;
         getContentPane().add(radioInterpolate, gridBagConstraints);
 
-        teFiles.setEditable(false);
-        teFiles.setColumns(20);
-        teFiles.setRows(5);
-        teFiles.setFocusable(false);
-        jScrollPane1.setViewportView(teFiles);
+        FileList.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                FileListKeyPressed(evt);
+            }
+        });
+        jScrollPane2.setViewportView(FileList);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -200,8 +229,7 @@ public class MainFrame extends javax.swing.JFrame {
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.weightx = 0.1;
         gridBagConstraints.weighty = 0.6;
-        gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 5);
-        getContentPane().add(jScrollPane1, gridBagConstraints);
+        getContentPane().add(jScrollPane2, gridBagConstraints);
 
         cbCam.setEnabled(false);
         gridBagConstraints = new java.awt.GridBagConstraints();
@@ -233,6 +261,21 @@ public class MainFrame extends javax.swing.JFrame {
     private void btnConvertActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnConvertActionPerformed
         doConversion();
     }//GEN-LAST:event_btnConvertActionPerformed
+
+    private void FileListKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_FileListKeyPressed
+        if(evt.getKeyCode() == 127) {
+            List selectedValues = FileList.getSelectedValuesList();
+            if(!selectedValues.isEmpty()) {
+                for (int i = fList.size()-1; i >= 0; i--) {
+                    if(selectedValues.contains(fList.get(i).toString())) {
+                        fList.remove(i);
+                    }
+                }
+                updateList();
+                updateButtons();
+            }
+        }
+    }//GEN-LAST:event_FileListKeyPressed
 
     protected void doClearList()
     {
@@ -339,11 +382,12 @@ public class MainFrame extends javax.swing.JFrame {
     
     protected void updateList()
     {
-        String txt = "";
-        for (File f : fList) txt += f.toString() + System.lineSeparator();
-        
-        teFiles.setText(txt);
-        teFiles.setCaretPosition(0);
+        FileList.removeAll();
+        DefaultListModel listModel = new DefaultListModel();
+        for (File f : fList) {
+            listModel.addElement(f.toString());
+        }
+        FileList.setModel(listModel);
     }
     
     protected void updateButtons()
@@ -467,6 +511,7 @@ public class MainFrame extends javax.swing.JFrame {
     }
     
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JList FileList;
     private javax.swing.JButton btnAddDir;
     private javax.swing.JButton btnAddFile;
     private javax.swing.JButton btnClear;
@@ -475,11 +520,10 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JComboBox cbCam;
     private javax.swing.Box.Filler filler1;
     private javax.swing.Box.Filler filler2;
-    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JProgressBar progBar;
     private javax.swing.JRadioButton radioBadPix;
     private javax.swing.ButtonGroup radioGrpMethod;
     private javax.swing.JRadioButton radioInterpolate;
-    private javax.swing.JTextArea teFiles;
     // End of variables declaration//GEN-END:variables
 }
