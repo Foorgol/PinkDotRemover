@@ -15,7 +15,6 @@ package org.nodomain.volkerk.PinkDotRemover;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.*;
-import javax.swing.JOptionPane;
 import org.nodomain.volkerk.LoggingLib.LoggingClass;
 import static org.nodomain.volkerk.PinkDotRemover.MainFrame.DEFAULT_DOT_DATA_DIR;
 
@@ -34,23 +33,8 @@ public class PinkDotRemoverMain extends LoggingClass {
         logLvl = LVL_DEBUG;  // bad hack
         
         dbg("Command line args: " + strCat(args));
-        logPush("Trying to resolve dirs and valid files");
         
-        // retrieve all files denoted by command line arguments
-        ArrayList<File> fList = collectFiles(args);
-        logPop("Done");
-        
-        // we need at least one file
-        if (fList.size() == 0)
-        {
-            //dbg("No valid files found!");
-            //printHelp();
-            doGUI();
-            return;
-        }
-        
-        dbg("At least one valid file found for conversion.");
-        
+        // read the dot database to get a list of all known camera types
         logPush("Trying to init dot location database");
         preLog(LVL_DEBUG, "Trying to determine JAR / execution path");
         // Determine the JAR's path
@@ -77,6 +61,37 @@ public class PinkDotRemoverMain extends LoggingClass {
         DotLocationDB db = new DotLocationDB(dotDataDir);
         logPop("Done");
         db.dumpInfo();
+        
+        // see if the first command line parameter contains a camera type
+        logPush("Check if the first command line argument contains a camera type");
+        String camType = MainFrame.DEFAULT_CAM_TYPE;
+        if (args.length != 0) {
+            for (String knownCam : db.getAllModels()) {
+                if (knownCam.toLowerCase().equals(args[0].toLowerCase())) {
+                    camType = knownCam;
+                    dbg("Match! Set camera type to ", knownCam);
+                }
+            }
+            
+        }
+        logPop("Done");
+        
+        logPush("Trying to resolve dirs and valid files");
+        
+        // retrieve all files denoted by command line arguments
+        ArrayList<File> fList = collectFiles(args);
+        logPop("Done");
+        
+        // we need at least one file
+        if (fList.size() == 0)
+        {
+            //dbg("No valid files found!");
+            //printHelp();
+            doGUI();
+            return;
+        }
+        
+        dbg("At least one valid file found for conversion.");
         
         // loop over all files and convert them one by one
         logPush("Looping over all found files for conversion");
